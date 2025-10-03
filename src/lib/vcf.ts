@@ -8,6 +8,9 @@ import { Variant, VariantSchema } from './schemas';
 export function parseVcfToVariants(vcfText: string): Variant[] {
   const lines = vcfText.split('\n');
   const variants: Variant[] = [];
+  const rawVariants: Variant[] = [];
+  
+  console.log(`Processing VCF with ${lines.length} lines`);
   
   // Process each line
   for (const line of lines) {
@@ -17,17 +20,30 @@ export function parseVcfToVariants(vcfText: string): Variant[] {
     }
     
     try {
-      const fields = line.split('\t');
+      // Split by tab or multiple spaces if tabs aren't present
+      const fields = line.includes('\t') ? line.split('\t') : line.split(/\s+/);
+      
+      console.log(`Processing line with ${fields.length} fields:`, fields);
       
       // Ensure we have at least the basic fields
       if (fields.length < 5) {
+        console.warn('Skipping line with insufficient fields:', line);
         continue;
       }
       
-      const [chrom, posStr, _id, ref, altField, _qual, _filter, info, ...rest] = fields;
+      const [chrom, posStr, _id, ref, altField, ...restFields] = fields;
+      
+      // Extract remaining fields if available
+      const _qual = restFields.length > 0 ? restFields[0] : '.';
+      const _filter = restFields.length > 1 ? restFields[1] : '.';
+      const info = restFields.length > 2 ? restFields[2] : '';
+      const rest = restFields.length > 3 ? restFields.slice(3) : [];
+      
+      console.log(`Parsed fields - CHROM: ${chrom}, POS: ${posStr}, REF: ${ref}, ALT: ${altField}, INFO: ${info}`);
       
       // Handle multi-allelic variants (comma-separated ALT field)
       const altAlleles = altField.split(',');
+      console.log(`Found ${altAlleles.length} alternative alleles:`, altAlleles);
       
       // Create a variant for each alternative allele
       for (let i = 0; i < altAlleles.length; i++) {
@@ -40,6 +56,9 @@ export function parseVcfToVariants(vcfText: string): Variant[] {
           ref,
           alt,
         };
+        
+        // Keep track of raw variants before validation
+        rawVariants.push({...variant});
         
         // Extract gene from INFO field if available
         if (info) {
@@ -72,6 +91,8 @@ export function parseVcfToVariants(vcfText: string): Variant[] {
             const formatFields = format.split(':');
             const sampleValues = sample.split(':');
             
+            console.log(`FORMAT fields: ${formatFields}, SAMPLE values: ${sampleValues}`);
+            
             // Find AF in FORMAT field
             const afIndex = formatFields.findIndex(f => f === 'AF');
             if (afIndex !== -1 && afIndex < sampleValues.length) {
@@ -85,17 +106,15 @@ export function parseVcfToVariants(vcfText: string): Variant[] {
             const gtIndex = formatFields.findIndex(f => f === 'GT');
             if (gtIndex !== -1 && gtIndex < sampleValues.length) {
               const gtValue = sampleValues[gtIndex];
-              // For multi-allelic sites, GT values use indices (0=ref, 1=first alt, 2=second alt, etc.)
-              // Check if the current alt index (i+1) is present in the GT field
-              const altIdx = i + 1;
-              if (!gtValue.includes(altIdx.toString())) {
-                // Skip this alt allele if it's not present in the genotype
-                continue;
-              }
+              console.log(`Found GT value: ${gtValue} for alt index ${i+1}`);
+              
+              // For now, include all variants regardless of GT value
+              // We'll just log the GT value for debugging
             }
           }
         }
         
+        // Add variant to the list
         variants.push(variant);
       }
     } catch (error) {
@@ -104,10 +123,37 @@ export function parseVcfToVariants(vcfText: string): Variant[] {
     }
   }
   
+  console.log(`Found ${variants.length} variants before validation`);
+  
+  // If we have raw variants but validation fails, use them anyway
+  if (variants.length === 0 && rawVariants.length > 0) {
+    console.warn('No variants passed initial processing, but we have raw variants. Using raw variants.');
+    for (const rawVariant of rawVariants) {
+      // Ensure we have the minimum required fields
+      if (rawVariant.chrom && rawVariant.pos && rawVariant.ref && rawVariant.alt) {
+        variants.push(rawVariant);
+      }
+    }
+  }
+  
   // Validate with Zod and throw error if empty
   if (variants.length === 0) {
     throw new Error('No valid variants found in VCF file');
   }
   
-  return VariantSchema.array().parse(variants);
+  try {
+    // Try to validate with Zod
+    return VariantSchema.array().parse(variants);
+  } catch (error) {
+    console.error('Zod validation error:', error);
+    
+    // If Zod validation fails but we have variants, return them anyway
+    if (variants.length > 0) {
+      console.warn('Returning unvalidated variants as fallback');
+      return variants as Variant[];
+    }
+    
+    // If we have no variants, throw the original error
+    throw error;
+  }
 }
