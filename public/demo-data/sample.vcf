@@ -1,0 +1,18 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##fileDate=20250915
+##source=OncofhirDemo
+##reference=GRCh38
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=HGVS,Number=1,Type=String,Description="HGVS protein notation">
+##INFO=<ID=CONSEQUENCE,Number=1,Type=String,Description="Variant consequence">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=AD,Number=R,Type=Integer,Description="Allelic depths for the ref and alt alleles in the order listed">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Approximate read depth">
+##FORMAT=<ID=VAF,Number=1,Type=Float,Description="Variant allele frequency">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE1
+7	55259515	rs121434568	T	G	100	PASS	GENE=EGFR;HGVS=p.L858R;CONSEQUENCE=missense_variant	GT:AD:DP:VAF	0/1:65:100:0.35
+17	7577120	rs28934576	G	A	95	PASS	GENE=TP53;HGVS=p.R273H;CONSEQUENCE=missense_variant	GT:AD:DP:VAF	0/1:42:100:0.42
+12	25398284	rs121913530	C	A	90	PASS	GENE=KRAS;HGVS=p.G12C;CONSEQUENCE=missense_variant	GT:AD:DP:VAF	0/1:28:100:0.28
+19	1220321	rs587781384	C	G	85	PASS	GENE=STK11;HGVS=p.F354L;CONSEQUENCE=missense_variant	GT:AD:DP:VAF	0/1:31:100:0.31
+9	21971186	rs121913388	G	A	92	PASS	GENE=CDKN2A;HGVS=p.W110*;CONSEQUENCE=stop_gained	GT:AD:DP:VAF	0/1:45:100:0.45
