@@ -13,6 +13,7 @@
     "prebuild": "npm run validate-env"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
     "@googleapis/healthcare": "^18.0.0",
     "@headlessui/react": "^1.7.17",
     "@heroicons/react": "^2.0.18",

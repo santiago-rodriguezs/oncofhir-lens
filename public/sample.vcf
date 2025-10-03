@@ -1,0 +1,13 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##fileDate=20250915
+##source=OncoFHIR-Lens
+##reference=GRCh38
+##INFO=<ID=GENE,Number=1,Type=String,Description="Gene symbol">
+##INFO=<ID=AF,Number=1,Type=Float,Description="Allele Frequency">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	SAMPLE1
+chr7	55249071	.	C	T	100	PASS	GENE=EGFR;AF=0.35	GT:AD:AF	0/1:65,35:0.35
+chr17	7675088	.	C	T	100	PASS	GENE=TP53;AF=0.42	GT:AD:AF	0/1:58,42:0.42
+chr3	179234297	.	A	G	100	PASS	GENE=PIK3CA;AF=0.28	GT:AD:AF	0/1:72,28:0.28
+chr4	1803568	.	G	A	100	PASS	GENE=FGFR3;AF=0.31	GT:AD:AF	0/1:69,31:0.31
+chr10	87864470	.	A	T	100	PASS	GENE=PTEN;AF=0.38	GT:AD:AF	0/1:62,38:0.38
