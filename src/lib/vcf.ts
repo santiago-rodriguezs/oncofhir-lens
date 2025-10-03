@@ -24,58 +24,80 @@ export function parseVcfToVariants(vcfText: string): Variant[] {
         continue;
       }
       
-      const [chrom, posStr, _id, ref, alt, _qual, _filter, info, ...rest] = fields;
+      const [chrom, posStr, _id, ref, altField, _qual, _filter, info, ...rest] = fields;
       
-      // Basic variant data
-      const variant: Variant = {
-        chrom,
-        pos: parseInt(posStr, 10),
-        ref,
-        alt,
-      };
+      // Handle multi-allelic variants (comma-separated ALT field)
+      const altAlleles = altField.split(',');
       
-      // Extract gene from INFO field if available
-      if (info) {
-        // Parse INFO field
-        const infoFields = info.split(';');
+      // Create a variant for each alternative allele
+      for (let i = 0; i < altAlleles.length; i++) {
+        const alt = altAlleles[i];
         
-        for (const field of infoFields) {
-          // Look for GENE= or gene= field
-          if (field.toUpperCase().startsWith('GENE=')) {
-            variant.gene = field.split('=')[1];
-          }
+        // Basic variant data
+        const variant: Variant = {
+          chrom,
+          pos: parseInt(posStr, 10),
+          ref,
+          alt,
+        };
+        
+        // Extract gene from INFO field if available
+        if (info) {
+          // Parse INFO field
+          const infoFields = info.split(';');
           
-          // Look for AF= field for variant allele frequency
-          if (field.toUpperCase().startsWith('AF=')) {
-            const afValue = parseFloat(field.split('=')[1]);
-            if (!isNaN(afValue)) {
-              variant.vaf = afValue;
+          for (const field of infoFields) {
+            // Look for GENE= or gene= field
+            if (field.toUpperCase().startsWith('GENE=')) {
+              variant.gene = field.split('=')[1];
+            }
+            
+            // Look for AF= field for variant allele frequency
+            // Note: For multi-allelic sites, this might be the combined AF or the AF of the first alt
+            if (field.toUpperCase().startsWith('AF=')) {
+              const afValue = parseFloat(field.split('=')[1]);
+              if (!isNaN(afValue)) {
+                variant.vaf = afValue;
+              }
             }
           }
         }
-      }
-      
-      // Extract VAF from sample field if available (FORMAT field with AF)
-      if (rest.length >= 2) {
-        const format = rest[0];
-        const sample = rest[1];
         
-        if (format && sample) {
-          const formatFields = format.split(':');
-          const sampleValues = sample.split(':');
+        // Extract VAF from sample field if available (FORMAT field with AF)
+        if (rest.length >= 2) {
+          const format = rest[0];
+          const sample = rest[1];
           
-          // Find AF in FORMAT field
-          const afIndex = formatFields.findIndex(f => f === 'AF');
-          if (afIndex !== -1 && afIndex < sampleValues.length) {
-            const afValue = parseFloat(sampleValues[afIndex]);
-            if (!isNaN(afValue)) {
-              variant.vaf = afValue;
+          if (format && sample) {
+            const formatFields = format.split(':');
+            const sampleValues = sample.split(':');
+            
+            // Find AF in FORMAT field
+            const afIndex = formatFields.findIndex(f => f === 'AF');
+            if (afIndex !== -1 && afIndex < sampleValues.length) {
+              const afValue = parseFloat(sampleValues[afIndex]);
+              if (!isNaN(afValue)) {
+                variant.vaf = afValue;
+              }
+            }
+            
+            // If GT (genotype) field is present, try to use it to determine if this alt allele is present
+            const gtIndex = formatFields.findIndex(f => f === 'GT');
+            if (gtIndex !== -1 && gtIndex < sampleValues.length) {
+              const gtValue = sampleValues[gtIndex];
+              // For multi-allelic sites, GT values use indices (0=ref, 1=first alt, 2=second alt, etc.)
+              // Check if the current alt index (i+1) is present in the GT field
+              const altIdx = i + 1;
+              if (!gtValue.includes(altIdx.toString())) {
+                // Skip this alt allele if it's not present in the genotype
+                continue;
+              }
             }
           }
         }
+        
+        variants.push(variant);
       }
-      
-      variants.push(variant);
     } catch (error) {
       console.error('Error parsing VCF line:', error);
       // Continue with next line
