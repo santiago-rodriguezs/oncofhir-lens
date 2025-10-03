@@ -32,7 +32,7 @@ export async function sonnetJson<T>(
   zodSchema: z.ZodType<T>
 ): Promise<T> {
   const anthropic = getAnthropic();
-  const modelId = model === 'claude-sonnet-4.5' ? 'claude-3-7-sonnet-2025-04-21' : model;
+  const modelId = model === 'claude-sonnet-4.5';
   
   try {
     // First attempt with temperature 0.1

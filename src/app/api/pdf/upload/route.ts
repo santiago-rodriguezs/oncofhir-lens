@@ -15,8 +15,11 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     
+    console.log("📁 File received:", file?.name, file?.type);
+    
     // Validate file
     if (!file || file.type !== "application/pdf") {
+      console.error("❌ Invalid file type:", file?.type);
       return NextResponse.json(
         { error: "Se requiere un archivo PDF válido" },
         { status: 400 }
@@ -24,31 +27,33 @@ export async function POST(request: NextRequest) {
     }
     
     // Convert file to buffer
+    console.log("🔄 Converting file to buffer...");
     const buffer = Buffer.from(await file.arrayBuffer());
     
     // Extract text from PDF
+    console.log("📄 Extracting text from PDF...");
     const text = await pdfToText(buffer);
+    console.log(`✅ Extracted ${text.length} characters`);
     
     // Validate extracted text
     if (!text || text.trim().length < 100) {
+      console.error("❌ Insufficient text extracted:", text.length);
       return NextResponse.json(
         { error: "No se pudo extraer texto útil del PDF" },
         { status: 422 }
       );
     }
     
+    console.log("📝 First 200 chars of extracted text:", text.substring(0, 200));
+    
     // System prompt for Sonnet
     const system = `Eres un curator genómico. A partir de texto de un informe, extrae SOLO JSON válido Variant[] con el esquema exacto:
 { chrom: string; pos: number; ref: string; alt: string; gene?: string; vaf?: number }.
 
 Normaliza cromosomas como "1..22,X,Y".
-
 pos entero 1-based.
-
 Si hay c.HGVS/p.HGVS, úsalo para inferir ref/alt cuando sea trivial; si no, deja ref/alt según lo explícito.
-
 vaf en 0..1 si está el porcentaje (convierte 23% → 0.23).
-
 Si no puedes extraer nada confiable, devuelve [].
 Solo JSON válido, sin markdown, sin comentarios.`;
     
@@ -58,9 +63,11 @@ Solo JSON válido, sin markdown, sin comentarios.`;
       hints: {}
     };
     
-    // Extract variants using Sonnet
+    console.log("🧬 Calling Sonnet 4.5 for variant extraction...");
+    
+    // Extract variants using Sonnet 4.5
     const variants = await sonnetJson(
-      "claude-3-7-sonnet-2025-04-21",
+      "claude-sonnet-4-5-20250929",
       system,
       JSON.stringify(user),
       "VariantArray",
@@ -68,12 +75,16 @@ Solo JSON válido, sin markdown, sin comentarios.`;
     );
     
     // Log extracted variants
-    console.log(`Extracted ${variants.length} variants from PDF`);
+    console.log(`✅ Extracted ${variants.length} variants from PDF`);
+    if (variants.length > 0) {
+      console.log("📊 First variant:", JSON.stringify(variants[0], null, 2));
+    }
     
     // Return variants
     return NextResponse.json({ variants }, { status: 200 });
   } catch (error) {
-    console.error("Error processing PDF:", error);
+    console.error("❌ Error processing PDF:", error);
+    console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");
     
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Error desconocido al procesar el PDF" },
