@@ -243,3 +243,16 @@ export const demoCaseData = {
   variants: demoVariants,
   detectedIssues: demoDetectedIssues,
 };
+
+// Ensure demo data is properly initialized
+if (!demoCaseData.patient) {
+  console.error('Demo patient data is missing');
+}
+
+if (!demoCaseData.specimen) {
+  console.error('Demo specimen data is missing');
+}
+
+if (!demoCaseData.variants || !Array.isArray(demoCaseData.variants)) {
+  console.error('Demo variants data is missing or not an array');
+}

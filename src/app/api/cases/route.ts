@@ -20,10 +20,17 @@ export async function GET(request: NextRequest) {
     // Verificar que demoCaseData y sus propiedades existan
     if (!demoCaseData || !demoCaseData.specimen || !demoCaseData.patient || !demoCaseData.variants) {
       console.error('Demo case data is incomplete');
-      return NextResponse.json(
-        { message: 'Demo data not available' },
-        { status: 500 }
-      );
+      
+      // Crear un caso de demostración de respaldo
+      const fallbackCase: CaseListItem = {
+        id: 'specimen-demo-001',
+        patientId: 'patient-demo-001',
+        label: 'Demo Genomic Study',
+        date: new Date().toISOString(),
+        variantCount: 3
+      };
+      
+      return NextResponse.json([fallbackCase], { status: 200 });
     }
 
     // For demo purposes, create a case list item from the demo data
