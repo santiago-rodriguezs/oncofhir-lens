@@ -60,9 +60,20 @@ export async function sonnetJson<T>(
         return validationResult.data;
       } else {
         console.error(`JSON validation failed for ${schemaName}:`, validationResult.error);
+        
         // Format the error message in a more readable way
         const formattedError = JSON.stringify(validationResult.error.format(), null, 2);
         console.error(`Formatted validation errors: ${formattedError}`);
+        
+        // Check for specific validation issues we want to highlight
+        const errorString = validationResult.error.message;
+        
+        // Check for missing category field in Observation resources
+        if (errorString.includes("category") && schemaName === "FhirBundle") {
+          console.error("CRITICAL ERROR: Missing 'category' field in Observation resource. Each Observation MUST include the 'category' field with at least one element for 'laboratory'.");
+          throw new Error(`Invalid ${schemaName} format: Missing 'category' field in Observation resource. Each Observation MUST include the 'category' field.`);
+        }
+        
         throw new Error(`Invalid ${schemaName} format: ${validationResult.error.message}`);
       }
     } catch (parseError) {
@@ -93,6 +104,16 @@ export async function sonnetJson<T>(
           // Format the retry error message in a more readable way
           const formattedError = JSON.stringify(retryValidationResult.error.format(), null, 2);
           console.error(`Formatted validation errors after retry: ${formattedError}`);
+          
+          // Check for specific validation issues we want to highlight
+          const errorString = retryValidationResult.error.message;
+          
+          // Check for missing category field in Observation resources
+          if (errorString.includes("category") && schemaName === "FhirBundle") {
+            console.error("CRITICAL ERROR: Missing 'category' field in Observation resource. Each Observation MUST include the 'category' field with at least one element for 'laboratory'.");
+            throw new Error(`Invalid ${schemaName} format after retry: Missing 'category' field in Observation resource. Each Observation MUST include the 'category' field.`);
+          }
+          
           throw new Error(`Invalid ${schemaName} format after retry: ${formattedError}`);
         }
       } catch (retryError) {
