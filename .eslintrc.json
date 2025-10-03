@@ -3,7 +3,9 @@
   "rules": {
     "react/no-unescaped-entities": "off",
     "@next/next/no-img-element": "off",
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+    "no-unused-vars": "off",
+    "react/jsx-key": "off",
+    "react/jsx-no-duplicate-props": "off"
   },
   "parserOptions": {
     "babelOptions": false

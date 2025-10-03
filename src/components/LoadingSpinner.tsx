@@ -14,13 +14,13 @@ export default function LoadingSpinner({ size = 'medium', message }: LoadingSpin
   
   return (
     <div className="flex flex-col items-center justify-center">
-      <div className="animate-spin rounded-full border-t-2 border-b-2 border-primary-600" 
+      <div 
+        className={`animate-spin rounded-full border-t-2 border-b-2 border-primary-600 ${sizeClasses[size]}`}
         aria-hidden="true"
         role="status"
         aria-label="Loading"
         data-testid="loading-spinner"
         style={{ borderTopColor: 'currentColor' }}
-        className={`${sizeClasses[size]}`}
       />
       {message && (
         <p className="mt-2 text-sm text-gray-600">{message}</p>

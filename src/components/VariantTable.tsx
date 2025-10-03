@@ -21,7 +21,8 @@ function SelectColumnFilter({
         optionSet.add(row.values[id]);
       }
     });
-    return [...optionSet].sort();
+    // Convertir Set a Array usando Array.from en lugar de spread operator
+    return Array.from(optionSet).sort();
   }, [id, preFilteredRows]);
 
   return (

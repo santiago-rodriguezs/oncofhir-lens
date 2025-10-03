@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateToken } from '@/lib/auth';
 import { IngestResponse } from '@/types/fhir';
-import { demoCaseData } from '@/lib/demo-data';
+import { demoCaseData } from '@/lib/utils/demo-data';
 
 // Configure for dynamic responses
 export const dynamic = 'force-dynamic';
