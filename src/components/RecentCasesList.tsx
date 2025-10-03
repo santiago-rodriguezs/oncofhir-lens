@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { DocumentTextIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { ClockIcon } from '@heroicons/react/24/outline';
 
 interface Case {
   id: string;
@@ -20,21 +20,39 @@ export default function RecentCasesList() {
   useEffect(() => {
     const fetchCases = async () => {
       try {
+        // Intentar obtener el token del entorno
+        const token = process.env.NEXT_PUBLIC_DEMO_SECRET;
+        
+        // Si no hay token, no intentar la petición
+        if (!token) {
+          console.log('No hay token de autenticación disponible');
+          setCases([]);
+          setIsLoading(false);
+          return;
+        }
+        
         const response = await fetch('/api/cases', {
           headers: {
-            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_DEMO_SECRET}`,
+            'Authorization': `Bearer ${token}`,
           },
         });
         
         if (!response.ok) {
-          throw new Error('Error al obtener casos');
+          if (response.status === 401) {
+            // Error de autenticación, mostrar mensaje amigable
+            console.log('No autorizado para ver casos');
+            setCases([]);
+          } else {
+            throw new Error('Error al obtener casos');
+          }
+        } else {
+          const data = await response.json();
+          setCases(data || []);
         }
-        
-        const data = await response.json();
-        setCases(data);
       } catch (err) {
+        console.error('Error al cargar casos:', err);
         setError('Error al cargar casos recientes');
-        console.error(err);
+        setCases([]);
       } finally {
         setIsLoading(false);
       }

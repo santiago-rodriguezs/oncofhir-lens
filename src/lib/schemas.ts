@@ -12,6 +12,8 @@ export const VariantSchema = z.object({
 
 export type Variant = z.infer<typeof VariantSchema>;
 
+export const VariantArraySchema = z.array(VariantSchema);
+
 // Annotation schema
 export const AnnotationSchema = z.object({
   gene: z.string(),

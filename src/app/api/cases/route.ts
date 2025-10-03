@@ -17,13 +17,22 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Verificar que demoCaseData y sus propiedades existan
+    if (!demoCaseData || !demoCaseData.specimen || !demoCaseData.patient || !demoCaseData.variants) {
+      console.error('Demo case data is incomplete');
+      return NextResponse.json(
+        { message: 'Demo data not available' },
+        { status: 500 }
+      );
+    }
+
     // For demo purposes, create a case list item from the demo data
     const demoCase: CaseListItem = {
-      id: demoCaseData.specimen.id,
-      patientId: demoCaseData.patient.id,
+      id: demoCaseData.specimen.id || 'specimen-demo-001',
+      patientId: demoCaseData.patient.id || 'patient-demo-001',
       label: demoCaseData.specimen.identifier?.[0]?.value || 'Demo Genomic Study',
       date: demoCaseData.specimen.collection?.collectedDateTime || new Date().toISOString(),
-      variantCount: demoCaseData.variants.length
+      variantCount: demoCaseData.variants.length || 0
     };
 
     // Return an array with the demo case

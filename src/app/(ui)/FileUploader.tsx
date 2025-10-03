@@ -4,9 +4,8 @@ import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 
 interface FileUploaderProps {
-  onFileLoaded: (content: string) => void;
+  onFileLoaded: (_text: string) => void;
   disabled?: boolean;
-  directUpload?: boolean;
 }
 
 export default function FileUploader({ onFileLoaded, disabled = false }: FileUploaderProps) {
@@ -18,8 +17,7 @@ export default function FileUploader({ onFileLoaded, disabled = false }: FileUpl
       const reader = new FileReader();
       
       reader.onload = () => {
-        const content = reader.result as string;
-        onFileLoaded(content);
+        onFileLoaded(reader.result as string);
       };
       
       reader.readAsText(file);

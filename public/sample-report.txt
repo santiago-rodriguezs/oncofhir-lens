@@ -1,0 +1,44 @@
+INFORME DE SECUENCIACIÓN GENÓMICA
+Hospital Universitario
+Fecha: 03/10/2025
+Paciente: Juan Pérez
+ID: 12345678
+
+RESUMEN DE HALLAZGOS
+
+Se detectaron las siguientes variantes somáticas:
+
+1. EGFR c.2573T>G (p.Leu858Arg) - VAF: 35%
+   Cromosoma 7, posición 55249071, cambio C>T
+   Variante patogénica asociada a respuesta a inhibidores de tirosina quinasa
+
+2. TP53 c.818G>A (p.Arg273His) - VAF: 42%
+   Cromosoma 17, posición 7675088, cambio C>T
+   Variante patogénica asociada a mal pronóstico
+
+3. PIK3CA c.3140A>G (p.His1047Arg) - VAF: 28%
+   Cromosoma 3, posición 179234297, cambio A>G
+   Variante patogénica asociada a activación de la vía PI3K/AKT/mTOR
+
+4. FGFR3 c.1138G>A (p.Gly380Arg) - VAF: 31%
+   Cromosoma 4, posición 1803568, cambio G>A
+   Variante patogénica asociada a respuesta a inhibidores de FGFR
+
+5. PTEN c.697C>T (p.Arg233*) - VAF: 38%
+   Cromosoma 10, posición 87864470, cambio A>T
+   Variante patogénica asociada a pérdida de función de PTEN
+
+INTERPRETACIÓN CLÍNICA
+
+El perfil molecular muestra múltiples alteraciones accionables que pueden orientar el tratamiento:
+
+- La mutación EGFR L858R es predictiva de respuesta a inhibidores de tirosina quinasa como osimertinib, gefitinib o erlotinib.
+- La mutación PIK3CA H1047R puede conferir sensibilidad a inhibidores de PI3K como alpelisib.
+- La mutación FGFR3 G380R puede conferir sensibilidad a inhibidores de FGFR como erdafitinib.
+- La mutación de pérdida de función en PTEN puede estar asociada con resistencia a terapias dirigidas contra la vía PI3K/AKT/mTOR.
+
+Se recomienda evaluación por oncología para considerar terapias dirigidas basadas en estos hallazgos moleculares.
+
+Dr. María González
+Especialista en Patología Molecular
+Colegiado Nº 123456

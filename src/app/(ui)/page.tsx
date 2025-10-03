@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Variant, Annotation } from '@/lib/schemas';
 import FileUploader from './FileUploader';
+import ExperimentalPdfSection from './ExperimentalPdfSection';
 
 export default function Home() {
   const [vcfText, setVcfText] = useState<string>('');
@@ -346,8 +347,18 @@ export default function Home() {
               </div>
             </div>
           )}
+          
         </div>
       )}
+      
+      {/* Experimental PDF Section - Siempre visible */}
+      <ExperimentalPdfSection 
+        onVariantsExtracted={setVariants}
+        isProcessing={isProcessing}
+        setIsProcessing={setIsProcessing}
+        setProcessingType={setProcessingType}
+        setError={setError}
+      />
     </div>
   );
 }

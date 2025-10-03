@@ -3,8 +3,18 @@ import type { NextRequest } from 'next/server';
 
 // This middleware protects API routes with a simple token check
 export function middleware(request: NextRequest) {
-  // Only apply to API routes
+  // Only apply to API routes, except for study/upload and pdf/upload
   if (request.nextUrl.pathname.startsWith('/api/')) {
+    // Exclude study/upload and pdf/upload routes from authentication
+    if (
+      request.nextUrl.pathname.startsWith('/api/study/upload') ||
+      request.nextUrl.pathname.startsWith('/api/pdf/upload') ||
+      request.nextUrl.pathname.startsWith('/api/annotate') ||
+      request.nextUrl.pathname.startsWith('/api/fhir')
+    ) {
+      return NextResponse.next();
+    }
+    
     const authHeader = request.headers.get('authorization');
     
     // Check if auth header exists and matches the expected format
