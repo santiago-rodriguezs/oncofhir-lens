@@ -96,7 +96,7 @@ async function fetchOncoKB(variants: Variant[]): Promise<Annotation[]> {
  * @returns Array of annotations
  */
 async function annotateSonnet(variants: Variant[]): Promise<Annotation[]> {
-  const system = "Eres un curador de conocimiento oncológico. Responde SOLO JSON válido del esquema Annotation[]. Usa conocimiento general (marcar nivel como 'Unknown' si no estás seguro).";
+  const system = "Eres un curador de conocimiento oncológico. IMPORTANTE: Responde SOLO con JSON válido del esquema Annotation[] sin ningún formato markdown, sin backticks, sin ```json, sin comentarios adicionales. El JSON debe comenzar con [ y terminar con ]. Usa conocimiento general (marcar nivel como 'Unknown' si no estás seguro).";
   
   const userPrompt = `
     Por favor, analiza las siguientes variantes genómicas y proporciona anotaciones oncológicas para cada una:
@@ -114,7 +114,7 @@ async function annotateSonnet(variants: Variant[]): Promise<Annotation[]> {
   `;
   
   return await sonnetJson(
-    'claude-sonnet-4.5',
+    "claude-sonnet-4-5-20250929",
     system,
     userPrompt,
     'Annotation[]',

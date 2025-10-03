@@ -47,15 +47,7 @@ export async function POST(request: NextRequest) {
     console.log("📝 First 200 chars of extracted text:", text.substring(0, 200));
     
     // System prompt for Sonnet
-    const system = `Eres un curator genómico. A partir de texto de un informe, extrae SOLO JSON válido Variant[] con el esquema exacto:
-{ chrom: string; pos: number; ref: string; alt: string; gene?: string; vaf?: number }.
-
-Normaliza cromosomas como "1..22,X,Y".
-pos entero 1-based.
-Si hay c.HGVS/p.HGVS, úsalo para inferir ref/alt cuando sea trivial; si no, deja ref/alt según lo explícito.
-vaf en 0..1 si está el porcentaje (convierte 23% → 0.23).
-Si no puedes extraer nada confiable, devuelve [].
-Solo JSON válido, sin markdown, sin comentarios.`;
+    const system = "Eres un curator genómico. A partir de texto de un informe, extrae SOLO JSON válido Variant[] con el esquema exacto: { chrom: string; pos: number; ref: string; alt: string; gene?: string; vaf?: number }. IMPORTANTE: Responde SOLO con JSON válido sin ningún formato markdown, sin backticks, sin ```json, sin comentarios adicionales. El JSON debe comenzar con [ y terminar con ].\n\nNormaliza cromosomas como \"1..22,X,Y\".\npos entero 1-based.\nSi hay c.HGVS/p.HGVS, úsalo para inferir ref/alt cuando sea trivial; si no, deja ref/alt según lo explícito.\nvaf en 0..1 si está el porcentaje (convierte 23% → 0.23).\nSi no puedes extraer nada confiable, devuelve [].\nSolo JSON válido, sin markdown, sin comentarios.";
     
     // User payload
     const user = {

@@ -49,37 +49,30 @@ export async function POST(request: NextRequest) {
     const { annotations, patient, specimen } = RequestSchema.parse(body);
     
     // System prompt for Sonnet
-    const system = `Eres integrador HL7 Genomics on FHIR (R4). Devuelve SOLO JSON FhirBundle estricto. 
-    Usa LOINC 69548-6 (Genetic variant assessment), 48018-6 (Gene studied), 48004-6 (DNA change c.HGVS), 
-    48005-3 (AA change p.HGVS), 81258-6 (VAF). Bundle.type='collection'.`;
+    const system = "Eres integrador HL7 Genomics on FHIR (R4). IMPORTANTE: Devuelve SOLO JSON FhirBundle estricto sin ningún formato markdown, sin backticks, sin ```json, sin comentarios adicionales. El JSON debe comenzar con { y terminar con }. Usa LOINC 69548-6 (Genetic variant assessment), 48018-6 (Gene studied), 48004-6 (DNA change c.HGVS), 48005-3 (AA change p.HGVS), 81258-6 (VAF). Bundle.type='collection'. CRÍTICO: Cada recurso Observation DEBE incluir el campo 'category' con al menos un elemento para 'laboratory'.";
     
     // User prompt with annotations and metadata
-    const userPrompt = `
-      Por favor, convierte las siguientes anotaciones genómicas a un Bundle FHIR R4:
-      
-      Anotaciones:
-      ${JSON.stringify(annotations, null, 2)}
-      
-      ${patient ? `Información del paciente:\n${JSON.stringify(patient, null, 2)}\n` : ''}
-      ${specimen ? `Información de la muestra:\n${JSON.stringify(specimen, null, 2)}\n` : ''}
-      
-      Crea un Bundle FHIR con:
-      1. Un recurso Patient (con los datos proporcionados o un stub)
-      2. Un recurso Specimen (con los datos proporcionados o un stub)
-      3. Un recurso Observation por cada variante genómica, usando:
-         - LOINC 69548-6 como código principal (Genetic variant assessment)
-         - Componentes con códigos LOINC:
-           - 48018-6 para el gen (Gene studied)
-           - 48004-6 para la notación c.HGVS (DNA change)
-           - 48005-3 para la notación p.HGVS (AA change) si está disponible
-           - 81258-6 para VAF si está disponible
-      
-      Responde SOLO con el JSON del Bundle FHIR, sin texto adicional.
-    `;
+    const userPrompt = "Por favor, convierte las siguientes anotaciones genómicas a un Bundle FHIR R4:\n\nAnotaciones:\n" + 
+      JSON.stringify(annotations, null, 2) + "\n\n" +
+      (patient ? "Información del paciente:\n" + JSON.stringify(patient, null, 2) + "\n" : "") +
+      (specimen ? "Información de la muestra:\n" + JSON.stringify(specimen, null, 2) + "\n" : "") +
+      "\nCrea un Bundle FHIR con:\n" +
+      "1. Un recurso Patient (con los datos proporcionados o un stub)\n" +
+      "2. Un recurso Specimen (con los datos proporcionados o un stub)\n" +
+      "3. Un recurso Observation por cada variante genómica, usando:\n" +
+      "   - LOINC 69548-6 como código principal (Genetic variant assessment)\n" +
+      "   - IMPORTANTE: Cada Observation DEBE incluir el campo 'category' con un array que contenga al menos un objeto con coding para 'laboratory'. Ejemplo:\n" +
+      "     \"category\": [{\"coding\": [{\"system\": \"http://terminology.hl7.org/CodeSystem/observation-category\", \"code\": \"laboratory\", \"display\": \"Laboratory\"}]}]\n" +
+      "   - Componentes con códigos LOINC:\n" +
+      "     - 48018-6 para el gen (Gene studied)\n" +
+      "     - 48004-6 para la notación c.HGVS (DNA change)\n" +
+      "     - 48005-3 para la notación p.HGVS (AA change) si está disponible\n" +
+      "     - 81258-6 para VAF si está disponible\n\n" +
+      "Responde SOLO con el JSON del Bundle FHIR, sin texto adicional.";
     
     // Call Sonnet to generate FHIR bundle
     const bundle = await sonnetJson<FhirBundle>(
-      'claude-sonnet-4.5',
+      "claude-sonnet-4-5-20250929",
       system,
       userPrompt,
       'FhirBundle',

@@ -32,21 +32,24 @@ export async function sonnetJson<T>(
   zodSchema: z.ZodType<T>
 ): Promise<T> {
   const anthropic = getAnthropic();
-  const modelId = model === 'claude-sonnet-4.5';
+  // Use the model string directly
   
   try {
     // First attempt with temperature 0.1
     const response = await anthropic.messages.create({
-      model: modelId,
+      model: model,
       system: system,
       messages: [{ role: 'user', content: userPrompt }],
       temperature: 0.1,
       max_tokens: 4000,
     });
     
-    const content = response.content[0].text;
+    let content = response.content[0].text;
     
     try {
+      // Clean the content from markdown formatting
+      content = cleanJsonContent(content);
+      
       // Try to parse as JSON
       const jsonData = JSON.parse(content);
       
@@ -57,6 +60,9 @@ export async function sonnetJson<T>(
         return validationResult.data;
       } else {
         console.error(`JSON validation failed for ${schemaName}:`, validationResult.error);
+        // Format the error message in a more readable way
+        const formattedError = JSON.stringify(validationResult.error.format(), null, 2);
+        console.error(`Formatted validation errors: ${formattedError}`);
         throw new Error(`Invalid ${schemaName} format: ${validationResult.error.message}`);
       }
     } catch (parseError) {
@@ -65,23 +71,29 @@ export async function sonnetJson<T>(
       // Retry with temperature 0
       console.log('Retrying with temperature 0...');
       const retryResponse = await anthropic.messages.create({
-        model: modelId,
+        model: model,
         system: `${system} IMPORTANT: You MUST respond with valid JSON only, no markdown or other text.`,
         messages: [{ role: 'user', content: userPrompt }],
         temperature: 0,
         max_tokens: 4000,
       });
       
-      const retryContent = retryResponse.content[0].text;
+      let retryContent = retryResponse.content[0].text;
       
       try {
+        // Clean the retry content from markdown formatting
+        retryContent = cleanJsonContent(retryContent);
+        
         const retryJsonData = JSON.parse(retryContent);
         const retryValidationResult = zodSchema.safeParse(retryJsonData);
         
         if (retryValidationResult.success) {
           return retryValidationResult.data;
         } else {
-          throw new Error(`Invalid ${schemaName} format after retry: ${retryValidationResult.error.message}`);
+          // Format the retry error message in a more readable way
+          const formattedError = JSON.stringify(retryValidationResult.error.format(), null, 2);
+          console.error(`Formatted validation errors after retry: ${formattedError}`);
+          throw new Error(`Invalid ${schemaName} format after retry: ${formattedError}`);
         }
       } catch (retryError) {
         throw new Error(`Failed to get valid ${schemaName} JSON after retry: ${retryError}`);
@@ -91,4 +103,33 @@ export async function sonnetJson<T>(
     console.error(`Error calling Anthropic API for ${schemaName}:`, error);
     throw error;
   }
+}
+
+/**
+ * Clean JSON content from markdown formatting
+ * @param content - Content to clean
+ * @returns Cleaned content
+ */
+function cleanJsonContent(content: string): string {
+  // Remove markdown code block formatting if present
+  let cleaned = content.trim();
+  
+  // Remove markdown code block backticks and json language identifier
+  if (cleaned.startsWith('```json')) {
+    cleaned = cleaned.substring(7).trim();
+  } else if (cleaned.startsWith('```')) {
+    cleaned = cleaned.substring(3).trim();
+  }
+  
+  // Remove trailing backticks if present
+  if (cleaned.endsWith('```')) {
+    cleaned = cleaned.substring(0, cleaned.length - 3).trim();
+  }
+  
+  // Log the cleaning process for debugging
+  if (cleaned !== content) {
+    console.log('Cleaned JSON content from markdown formatting');
+  }
+  
+  return cleaned;
 }
