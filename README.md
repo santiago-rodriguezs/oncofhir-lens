@@ -1,13 +1,14 @@
 # OncoFHIR Lens
 
-OncoFHIR Lens is a Next.js 14 application that helps physicians interpret genomic studies by transforming sequencing results (VCF) into clinician-friendly insights. The application leverages HL7 Genomics on FHIR standards to store and retrieve genomic data, and uses Google's Gemini AI to provide clinical suggestions.
+OncoFHIR Lens is a Next.js 14 application that helps physicians interpret genomic studies by extracting variants from clinical genomic reports (PDF) or sequencing results (VCF) into clinician-friendly insights. The application leverages HL7 Genomics on FHIR standards to store and retrieve genomic data, and uses Anthropic's Claude Sonnet 4.5 to extract, annotate, and provide clinical suggestions.
 
 ## Features
 
-- Upload and process genomic studies (VCF files)
-- View interpretable variant tables with filtering capabilities
-- Receive AI-assisted clinical suggestions
-- Persist data using Google Healthcare API (FHIR store)
+- Extract genomic variants directly from clinical PDF reports using Claude Sonnet 4.5
+- Upload and process genomic studies (VCF files) as an alternative workflow
+- Automatically annotate variants with OncoKB, ClinVar, and DGIdb data
+- View interpretable variant tables with clinical significance and therapeutic options
+- Generate standardized FHIR bundles for interoperability
 - Secure server-side processing of sensitive operations
 
 ## Tech Stack
@@ -15,37 +16,56 @@ OncoFHIR Lens is a Next.js 14 application that helps physicians interpret genomi
 - **Frontend**: Next.js 14 (App Router), TypeScript, TailwindCSS
 - **Backend**: Next.js API routes (server runtime)
 - **Data Storage**: Google Healthcare API (FHIR)
-- **AI**: Google Gemini (Vertex AI)
+- **AI**: Anthropic Claude Sonnet 4.5
+- **External APIs**: OncoKB, ClinVar (E-utilities), DGIdb
 - **Authentication**: Simple token-based auth (for demo purposes)
 
 ## Data Mapping
 
 ```
-VCF File → Parse → FHIR Resources
-                    ├── Patient
-                    ├── Specimen
-                    ├── Observation(s) [Genomics profile]
-                    └── DetectedIssue(s) [Clinical suggestions]
+PDF Report → Claude Sonnet 4.5 → Extracted Variants → Annotation → FHIR Resources
+                                                                   ├── Patient
+                                                                   ├── Specimen
+                                                                   └── Observation(s) [Genomics profile]
+
+VCF File → Parse → Variants → Annotation → FHIR Resources
+                                            ├── Patient
+                                            ├── Specimen
+                                            └── Observation(s) [Genomics profile]
 ```
 
 ## Prerequisites
 
 - Node.js 18.x or higher
-- Google Cloud Platform account with Healthcare API enabled
-- Google Cloud service account with appropriate permissions
+- Anthropic API key for Claude Sonnet 4.5
+- Google Cloud Platform account with Healthcare API enabled (optional)
 - (Optional) OncoKB API key for variant annotation
-- (Optional) Google Vertex AI API access for Gemini
+- (Optional) NCBI E-utilities access for ClinVar
+- (Optional) DGIdb API access
 
 ## Environment Setup
 
 Create a `.env.local` file in the root directory with the following variables:
 
 ```
-# Google Cloud Healthcare API Configuration
-GOOGLE_PROJECT_ID=your-project-id
-GOOGLE_LOCATION=us-central1
-HEALTHCARE_DATASET=oncofhir-dataset
-FHIR_STORE=oncofhir-store
+# Required: Anthropic API Key for Claude Sonnet 4.5
+ANTHROPIC_API_KEY=your-anthropic-api-key
+
+# Optional: OncoKB API Configuration
+# ONCOKB_API_KEY=your-oncokb-api-key
+# ONCOKB_BASE_URL=https://oncokb.org/api/v1
+
+# Optional: ClinVar E-utilities Configuration
+# CLINVAR_EUTILS=https://eutils.ncbi.nlm.nih.gov/entrez/eutils
+
+# Optional: DGIdb API Configuration
+# DGIDB_BASE_URL=https://dgidb.org/api
+
+# Optional: Google Cloud Healthcare API Configuration
+# GOOGLE_PROJECT_ID=your-project-id
+# GOOGLE_LOCATION=us-central1
+# HEALTHCARE_DATASET=oncofhir-dataset
+# FHIR_STORE=oncofhir-store
 # Optional: Path to service account key if not using Application Default Credentials
 # GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 

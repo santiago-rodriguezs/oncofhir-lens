@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     const { annotations, patient, specimen } = RequestSchema.parse(body);
     
     // System prompt for Sonnet
-    const system = "Eres integrador HL7 Genomics on FHIR (R4). IMPORTANTE: Devuelve SOLO JSON FhirBundle estricto sin ningún formato markdown, sin backticks, sin ```json, sin comentarios adicionales. El JSON debe comenzar con { y terminar con }. Usa LOINC 69548-6 (Genetic variant assessment), 48018-6 (Gene studied), 48004-6 (DNA change c.HGVS), 48005-3 (AA change p.HGVS), 81258-6 (VAF). Bundle.type='collection'. CRÍTICO: Cada recurso Observation DEBE incluir el campo 'category' con al menos un elemento para 'laboratory'.";
+    const system = "Eres un experto en HL7 FHIR Genomics.\nConvierte los datos consolidados en un Bundle R4 (type: \"collection\") con recursos:\n- Patient (stub)\n- Specimen (stub)\n- Observation (genetic variant) por cada entrada\n\nUsa LOINC codes:\n- 69548-6: Genetic variant assessment\n- 48018-6: Gene studied\n- 48004-6: DNA change (c.HGVS)\n- 48005-3: Amino acid change (p.HGVS)\n- 81258-6: Variant allele frequency (VAF)\n\nIncluye `note` con terapias sugeridas y fuentes.\nDevuelve SOLO JSON válido del esquema FhirBundle.\n\nCRÍTICO: Cada recurso Observation DEBE incluir el campo 'category' con al menos un elemento para 'laboratory'. Ejemplo:\n\"category\": [\n  {\n    \"coding\": [\n      {\n        \"system\": \"http://terminology.hl7.org/CodeSystem/observation-category\",\n        \"code\": \"laboratory\",\n        \"display\": \"Laboratory\"\n      }\n    ]\n  }\n]";
     
     // User prompt with annotations and metadata
     const userPrompt = "Por favor, convierte las siguientes anotaciones genómicas a un Bundle FHIR R4:\n\nAnotaciones:\n" + 
@@ -61,13 +61,24 @@ export async function POST(request: NextRequest) {
       "2. Un recurso Specimen (con los datos proporcionados o un stub)\n" +
       "3. Un recurso Observation por cada variante genómica, usando:\n" +
       "   - LOINC 69548-6 como código principal (Genetic variant assessment)\n" +
-      "   - IMPORTANTE: Cada Observation DEBE incluir el campo 'category' con un array que contenga al menos un objeto con coding para 'laboratory'. Ejemplo:\n" +
-      "     \"category\": [{\"coding\": [{\"system\": \"http://terminology.hl7.org/CodeSystem/observation-category\", \"code\": \"laboratory\", \"display\": \"Laboratory\"}]}]\n" +
+      "   - CRÍTICO: Cada Observation DEBE incluir el campo 'category' con un array que contenga al menos un objeto con coding para 'laboratory'. Ejemplo:\n" +
+      "     \"category\": [\n" +
+      "       {\n" +
+      "         \"coding\": [\n" +
+      "           {\n" +
+      "             \"system\": \"http://terminology.hl7.org/CodeSystem/observation-category\",\n" +
+      "             \"code\": \"laboratory\",\n" +
+      "             \"display\": \"Laboratory\"\n" +
+      "           }\n" +
+      "         ]\n" +
+      "       }\n" +
+      "     ]\n" +
       "   - Componentes con códigos LOINC:\n" +
       "     - 48018-6 para el gen (Gene studied)\n" +
       "     - 48004-6 para la notación c.HGVS (DNA change)\n" +
       "     - 48005-3 para la notación p.HGVS (AA change) si está disponible\n" +
       "     - 81258-6 para VAF si está disponible\n\n" +
+      "   - Incluye un campo 'note' con las terapias sugeridas y fuentes de evidencia\n\n" +
       "Responde SOLO con el JSON del Bundle FHIR, sin texto adicional.";
     
     // Call Sonnet to generate FHIR bundle

@@ -47,12 +47,11 @@ export async function POST(request: NextRequest) {
     console.log("📝 First 200 chars of extracted text:", text.substring(0, 200));
     
     // System prompt for Sonnet
-    const system = "Eres un curator genómico. A partir de texto de un informe, extrae SOLO JSON válido Variant[] con el esquema exacto: { chrom: string; pos: number; ref: string; alt: string; gene?: string; vaf?: number }. IMPORTANTE: Responde SOLO con JSON válido sin ningún formato markdown, sin backticks, sin ```json, sin comentarios adicionales. El JSON debe comenzar con [ y terminar con ].\n\nNormaliza cromosomas como \"1..22,X,Y\".\npos entero 1-based.\nSi hay c.HGVS/p.HGVS, úsalo para inferir ref/alt cuando sea trivial; si no, deja ref/alt según lo explícito.\nvaf en 0..1 si está el porcentaje (convierte 23% → 0.23).\nSi no puedes extraer nada confiable, devuelve [].\nSolo JSON válido, sin markdown, sin comentarios.";
+    const system = "Eres un genetista clínico especializado en interpretación de informes de secuenciación.\nA partir del texto plano de un estudio genómico, extrae SOLO JSON válido (sin markdown ni comentarios) según el siguiente esquema:\n\nVariant[] = [{\n  \"gene\": string,\n  \"chrom\"?: string,\n  \"pos\"?: number,\n  \"ref\"?: string,\n  \"alt\"?: string,\n  \"hgvs_c\"?: string,\n  \"hgvs_p\"?: string,\n  \"vaf\"?: number\n}]\n\n- Usa 'vaf' entre 0 y 1 si aparece porcentaje (ej: 22% → 0.22)\n- Normaliza cromosomas (1..22,X,Y)\n- Si el texto es ambiguo, deja campos vacíos\n- Devuelve SOLO JSON, sin texto adicional";
     
     // User payload
     const user = {
-      reportText: text,
-      hints: {}
+      reportText: text
     };
     
     console.log("🧬 Calling Sonnet 4.5 for variant extraction...");

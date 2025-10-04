@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { Variant, Annotation } from '@/lib/schemas';
 import FileUploader from './FileUploader';
-import ExperimentalPdfSection from './ExperimentalPdfSection';
 
 export default function Home() {
   const [vcfText, setVcfText] = useState<string>('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [processingType, setProcessingType] = useState<string>('');
   const [variants, setVariants] = useState<Variant[]>([]);
@@ -14,6 +14,7 @@ export default function Home() {
   const [fhirBundle, setFhirBundle] = useState<Record<string, any> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('variants');
+  const [workflowMode, setWorkflowMode] = useState<'pdf' | 'vcf'>('pdf');
 
   // Process VCF
   const handleProcessVcf = async () => {
@@ -27,7 +28,7 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await fetch('/api/study/upload', {
+      const response = await fetch('/api/vcf/upload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,11 +50,56 @@ export default function Home() {
       setIsProcessing(false);
     }
   };
+  
+  // Process PDF
+  const handleProcessPdf = async () => {
+    if (!selectedFile) {
+      setError('Por favor, seleccione un archivo PDF');
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessingType('variants');
+    setError(null);
+
+    try {
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      // Call the API
+      const response = await fetch('/api/pdf/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al procesar el archivo PDF');
+      }
+
+      const data = await response.json();
+      setVariants(data.variants);
+      setActiveTab('variants');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  // Handle file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setSelectedFile(files[0]);
+    }
+  };
 
   // Annotate variants
   const handleAnnotate = async () => {
     if (variants.length === 0) {
-      setError('Primero debe procesar un archivo VCF');
+      setError('Primero debe procesar un archivo');
       return;
     }
 
@@ -62,7 +108,7 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await fetch('/api/annotate/oncokb', {
+      const response = await fetch('/api/annotate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -162,38 +208,98 @@ export default function Home() {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">OncoFHIR Lens</h1>
       
-      {/* VCF Input */}
+      {/* Workflow Selector */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold mb-2">Subir VCF</h2>
-        
-        {/* Dropzone para subir archivos */}
-        <FileUploader onFileLoaded={setVcfText} disabled={isProcessing} />
-        
-        <div className="mt-4">
-          <h3 className="text-md font-medium mb-2">O pegue el contenido VCF:</h3>
-          <textarea
-            className="w-full h-40 p-2 border border-gray-300 rounded"
-            placeholder="Pegue el contenido del archivo VCF aquí..."
-            value={vcfText}
-            onChange={(e) => setVcfText(e.target.value)}
-          />
+        <div className="flex border-b border-gray-200">
+          <button
+            className={`py-2 px-4 font-medium ${workflowMode === 'pdf' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setWorkflowMode('pdf')}
+          >
+            Subir estudio genómico (PDF)
+          </button>
+          <button
+            className={`py-2 px-4 font-medium ${workflowMode === 'vcf' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+            onClick={() => setWorkflowMode('vcf')}
+          >
+            Procesar VCF (opcional)
+          </button>
         </div>
-        
-        <button
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-          onClick={handleProcessVcf}
-          disabled={isProcessing || !vcfText.trim()}
-        >
-          {isProcessing && processingType === 'variants' ? 'Procesando...' : 'Procesar VCF'}
-        </button>
-        
-        <button 
-          className="mt-4 ml-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:bg-gray-400"
-          onClick={handleLoadSample}
-        >
-          Cargar ejemplo VCF
-        </button>
       </div>
+      
+      {/* PDF Input - Primary Workflow */}
+      {workflowMode === 'pdf' && (
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">Subir estudio genómico (PDF)</h2>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Seleccionar archivo PDF
+            </label>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileChange}
+              className="block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-md file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-50 file:text-blue-700
+                hover:file:bg-blue-100"
+              disabled={isProcessing}
+            />
+          </div>
+          
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+            <p className="text-sm text-yellow-700">
+              Esta función extrae variantes de un PDF clínico usando Claude Sonnet 4.5.
+              Los mejores resultados se obtienen con informes de texto seleccionable (no escaneados).
+            </p>
+          </div>
+          
+          <button
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+            onClick={handleProcessPdf}
+            disabled={isProcessing || !selectedFile}
+          >
+            {isProcessing && processingType === 'variants' ? 'Procesando...' : 'Extraer variantes'}
+          </button>
+        </div>
+      )}
+      
+      {/* VCF Input - Secondary Workflow */}
+      {workflowMode === 'vcf' && (
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-2">Procesar VCF</h2>
+          
+          {/* Dropzone para subir archivos */}
+          <FileUploader onFileLoaded={setVcfText} disabled={isProcessing} />
+          
+          <div className="mt-4">
+            <h3 className="text-md font-medium mb-2">O pegue el contenido VCF:</h3>
+            <textarea
+              className="w-full h-40 p-2 border border-gray-300 rounded"
+              placeholder="Pegue el contenido del archivo VCF aquí..."
+              value={vcfText}
+              onChange={(e) => setVcfText(e.target.value)}
+            />
+          </div>
+          
+          <button
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+            onClick={handleProcessVcf}
+            disabled={isProcessing || !vcfText.trim()}
+          >
+            {isProcessing && processingType === 'variants' ? 'Procesando...' : 'Procesar VCF'}
+          </button>
+          
+          <button 
+            className="mt-4 ml-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:bg-gray-400"
+            onClick={handleLoadSample}
+          >
+            Cargar ejemplo VCF
+          </button>
+        </div>
+      )}
       
       {/* Error display */}
       {error && (
@@ -351,14 +457,10 @@ export default function Home() {
         </div>
       )}
       
-      {/* Experimental PDF Section - Siempre visible */}
-      <ExperimentalPdfSection 
-        onVariantsExtracted={setVariants}
-        isProcessing={isProcessing}
-        setIsProcessing={setIsProcessing}
-        setProcessingType={setProcessingType}
-        setError={setError}
-      />
+      {/* Footer */}
+      <div className="mt-8 pt-4 border-t border-gray-200 text-center text-gray-500 text-sm">
+        OncoFHIR Lens - Powered by Claude Sonnet 4.5
+      </div>
     </div>
   );
 }

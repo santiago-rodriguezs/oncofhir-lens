@@ -8,6 +8,8 @@ export const VariantSchema = z.object({
   alt: z.string(),
   gene: z.string().optional(),
   vaf: z.number().optional(),
+  hgvs_c: z.string().optional(),
+  hgvs_p: z.string().optional(),
 });
 
 export type Variant = z.infer<typeof VariantSchema>;
@@ -31,6 +33,24 @@ export const AnnotationSchema = z.object({
 });
 
 export type Annotation = z.infer<typeof AnnotationSchema>;
+
+// Consolidated annotation schema
+export const ConsolidatedAnnotationSchema = z.object({
+  gene: z.string(),
+  variant: z.string(),
+  oncogenicity: z.string(),
+  clinicalSignificance: z.string(),
+  therapies: z.array(
+    z.object({
+      drug: z.string(),
+      level: z.string(),
+      source: z.string()
+    })
+  ),
+  evidenceSources: z.array(z.string())
+});
+
+export type ConsolidatedAnnotation = z.infer<typeof ConsolidatedAnnotationSchema>;
 
 // FHIR Bundle schema
 export const FhirBundleSchema = z.object({
