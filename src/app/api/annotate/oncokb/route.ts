@@ -2,14 +2,27 @@ import { sonnetJson } from '@/lib/sonnet';
 import { Variant, VariantSchema, Annotation, AnnotationSchema } from '@/lib/schemas';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { getOncoKbAnnotations } from '@/lib/oncokb/client';
 
 // Define Node.js runtime
 export const runtime = 'nodejs';
 
-// Request body schema
-const RequestSchema = z.object({
+// Request body schema for variants
+const VariantsRequestSchema = z.object({
   variants: z.array(VariantSchema),
 });
+
+// Request body schema for annotations
+const AnnotationsRequestSchema = z.array(
+  z.object({
+    geneSymbol: z.string(),
+    variant: z.string().optional(),
+    hgvs: z.string().optional(),
+    tumorType: z.string().optional(),
+    referenceGenome: z.enum(['GRCh37', 'GRCh38']).optional(),
+    alterationType: z.enum(['MUTATION', 'CNA', 'SV']).optional(),
+  })
+);
 
 /**
  * Fetch annotations from OncoKB API
@@ -17,7 +30,7 @@ const RequestSchema = z.object({
  * @returns Array of annotations
  */
 async function fetchOncoKB(variants: Variant[]): Promise<Annotation[]> {
-  if (!process.env.ONCOKB_API_KEY || !process.env.ONCOKB_BASE_URL) {
+  if (!process.env.ONCOKB_AUTH_TOKEN || !process.env.ONCOKB_BASE_URL) {
     throw new Error('OncoKB API not configured');
   }
   
@@ -37,7 +50,7 @@ async function fetchOncoKB(variants: Variant[]): Promise<Annotation[]> {
         `${process.env.ONCOKB_BASE_URL}/annotate/mutations/byGenomicChange?${params.toString()}`,
         {
           headers: {
-            'Authorization': `Bearer ${process.env.ONCOKB_API_KEY}`,
+            'Authorization': `Bearer ${process.env.ONCOKB_AUTH_TOKEN}`,
             'Content-Type': 'application/json',
           },
         }
@@ -123,44 +136,78 @@ async function annotateSonnet(variants: Variant[]): Promise<Annotation[]> {
 }
 
 /**
- * POST handler for variant annotation
+ * POST handler for variant annotation and OncoKB annotations
  */
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { variants } = RequestSchema.parse(body);
     
-    let annotations: Annotation[];
-    
-    // Try OncoKB API if configured, otherwise use Sonnet
-    if (process.env.ONCOKB_API_KEY && process.env.ONCOKB_BASE_URL) {
+    // Check if the request is for OncoKB annotations or variants
+    if (Array.isArray(body) && body.length > 0 && 'geneSymbol' in body[0]) {
+      // This is a request for OncoKB annotations
       try {
-        annotations = await fetchOncoKB(variants);
+        // Validate the request
+        const annotations = AnnotationsRequestSchema.parse(body);
+        
+        // Call the OncoKB client
+        console.log('Calling getOncoKbAnnotations with', annotations.length, 'annotations');
+        const results = await getOncoKbAnnotations(annotations);
+        console.log('OncoKB results received:', results.length);
+        
+        // Return the results
+        return NextResponse.json(results);
       } catch (error) {
-        console.error('OncoKB API error, falling back to Sonnet:', error);
-        annotations = await annotateSonnet(variants);
+        console.error('Error in OncoKB annotations:', error);
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : 'Unknown error' },
+          { status: 500 }
+        );
       }
     } else {
-      // Use Sonnet for annotation
-      annotations = await annotateSonnet(variants);
+      // This is a request for variant annotation
+      try {
+        // Validate the request
+        const { variants } = VariantsRequestSchema.parse(body);
+        
+        let annotations: Annotation[];
+        
+        // Try OncoKB API if configured, otherwise use Sonnet
+        if (process.env.ONCOKB_AUTH_TOKEN && process.env.ONCOKB_BASE_URL) {
+          try {
+            annotations = await fetchOncoKB(variants);
+          } catch (error) {
+            console.error('OncoKB API error, falling back to Sonnet:', error);
+            annotations = await annotateSonnet(variants);
+          }
+        } else {
+          // Use Sonnet for annotation
+          annotations = await annotateSonnet(variants);
+        }
+        
+        // Validate annotations
+        const validatedAnnotations = z.array(AnnotationSchema).parse(annotations);
+        
+        // Return annotations
+        return NextResponse.json({ annotations: validatedAnnotations }, { status: 200 });
+      } catch (error) {
+        console.error('Error annotating variants:', error);
+        
+        if (error instanceof z.ZodError) {
+          return NextResponse.json(
+            { error: 'Invalid request format', details: error.errors },
+            { status: 400 }
+          );
+        }
+        
+        return NextResponse.json(
+          { error: error instanceof Error ? error.message : 'Unknown error' },
+          { status: 500 }
+        );
+      }
     }
-    
-    // Validate annotations
-    const validatedAnnotations = z.array(AnnotationSchema).parse(annotations);
-    
-    // Return annotations
-    return NextResponse.json({ annotations: validatedAnnotations }, { status: 200 });
   } catch (error) {
-    console.error('Error annotating variants:', error);
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid request format', details: error.errors },
-        { status: 400 }
-      );
-    }
-    
+    console.error('Error processing request:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }

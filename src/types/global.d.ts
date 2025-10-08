@@ -8,7 +8,8 @@ declare namespace NodeJS {
     HEALTHCARE_DATASET: string;
     FHIR_STORE: string;
     GOOGLE_APPLICATION_CREDENTIALS?: string;
-    ONCOKB_API_KEY?: string;
+    ONCOKB_AUTH_TOKEN?: string;
+    ONCOKB_BASE_URL?: string;
     GCP_VERTEX_LOCATION?: string;
     GEMINI_MODEL?: string;
     DEMO_SECRET: string;

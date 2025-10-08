@@ -1,19 +1,29 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Variant, Annotation } from '@/lib/schemas';
+
+// Extended annotation type for OncoKB integration
+type ExtendedAnnotation = Annotation & {
+  hotspot?: boolean;
+  evidenceLevel?: string;
+  suggestedDrugs?: string;
+  proteinChange?: string;
+};
 import FileUploader from './FileUploader';
 
 export default function Home() {
+  const router = useRouter();
   const [vcfText, setVcfText] = useState<string>('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [processingType, setProcessingType] = useState<string>('');
   const [variants, setVariants] = useState<Variant[]>([]);
-  const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [annotations, setAnnotations] = useState<ExtendedAnnotation[]>([]);
   const [fhirBundle, setFhirBundle] = useState<Record<string, any> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('variants');
+  const [activeTab, setActiveTab] = useState<'variants' | 'annotations' | 'civic' | 'oncokb' | 'fhir'>('variants');
   const [workflowMode, setWorkflowMode] = useState<'pdf' | 'vcf'>('pdf');
 
   // Process VCF
@@ -336,6 +346,28 @@ export default function Home() {
               </button>
               <button
                 className={`py-2 px-4 font-medium ${
+                  activeTab === 'civic'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                onClick={() => setActiveTab('civic')}
+                disabled={annotations.length === 0}
+              >
+                CIViC Insights
+              </button>
+              <button
+                className={`py-2 px-4 font-medium ${
+                  activeTab === 'oncokb'
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                onClick={() => setActiveTab('oncokb')}
+                disabled={annotations.length === 0}
+              >
+                OncoKB Insights
+              </button>
+              <button
+                className={`py-2 px-4 font-medium ${
                   activeTab === 'fhir'
                     ? 'border-b-2 border-blue-500 text-blue-600'
                     : 'text-gray-500 hover:text-gray-700'
@@ -406,32 +438,151 @@ export default function Home() {
                 </button>
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="py-2 px-4 border-b">Gen</th>
-                      <th className="py-2 px-4 border-b">Variante</th>
-                      <th className="py-2 px-4 border-b">Oncogenicidad</th>
-                      <th className="py-2 px-4 border-b">Tipos de Cáncer</th>
-                      <th className="py-2 px-4 border-b">Accionabilidad</th>
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gen</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variante</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oncogenicidad</th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipos de Cáncer</th>
+                      {activeTab === 'oncokb' && (
+                        <>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hotspot</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nivel de Evidencia</th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Drogas Sugeridas</th>
+                        </>
+                      )}
+                      {activeTab !== 'oncokb' && (
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accionabilidad</th>
+                      )}
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="bg-white divide-y divide-gray-200">
                     {annotations.map((annotation, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
-                        <td className="py-2 px-4 border-b">{annotation.gene}</td>
-                        <td className="py-2 px-4 border-b">{annotation.variant}</td>
-                        <td className="py-2 px-4 border-b">{annotation.oncogenicity || 'Unknown'}</td>
-                        <td className="py-2 px-4 border-b">
-                          {annotation.cancerTypes?.join(', ') || 'N/A'}
+                      <tr key={index}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{annotation.gene}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{annotation.variant}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{annotation.oncogenicity}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {annotation.cancerTypes?.length ? annotation.cancerTypes.join(', ') : 'N/A'}
                         </td>
-                        <td className="py-2 px-4 border-b">
-                          {annotation.actionability?.map(a => `${a.drug} (${a.level})`).join(', ') || 'N/A'}
-                        </td>
+                        {activeTab === 'oncokb' && (
+                          <>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {annotation.hotspot ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  Sí
+                                </span>
+                              ) : 'No'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {annotation.evidenceLevel !== 'Unknown' ? (
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  annotation.evidenceLevel === '1' ? 'bg-green-100 text-green-800' :
+                                  annotation.evidenceLevel === '2' ? 'bg-blue-100 text-blue-800' :
+                                  annotation.evidenceLevel === '3' ? 'bg-yellow-100 text-yellow-800' :
+                                  annotation.evidenceLevel === '4' ? 'bg-orange-100 text-orange-800' :
+                                  annotation.evidenceLevel.startsWith('R') ? 'bg-red-100 text-red-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {annotation.evidenceLevel}
+                                </span>
+                              ) : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {annotation.suggestedDrugs || 'N/A'}
+                            </td>
+                          </>
+                        )}
+                        {activeTab !== 'oncokb' && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {annotation.actionability?.length ? 
+                              annotation.actionability.map(action => `${action.drug} (${action.level})`).join(', ') : 
+                              'N/A'
+                            }
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+          
+          {/* CIViC Insights */}
+          {activeTab === 'civic' && annotations.length > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-semibold">CIViC Insights</h3>
+                <button
+                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                  onClick={() => {
+                    // Convert annotations to CivicAnnotation format
+                    const civicAnnotations = annotations.map(annotation => ({
+                      geneSymbol: annotation.gene,
+                      variant: annotation.variant,
+                      tumorType: annotation.cancerTypes?.[0]
+                    }));
+                    
+                    // Navigate to CIViC Insights page with annotations as URL parameter
+                    const encodedAnnotations = encodeURIComponent(JSON.stringify(civicAnnotations));
+                    router.push(`/civic-insights?annotations=${encodedAnnotations}`);
+                  }}
+                >
+                  Ver CIViC Insights
+                </button>
+              </div>
+              <div className="bg-indigo-50 border-l-4 border-indigo-400 p-4">
+                <p className="text-sm text-indigo-700">
+                  CIViC Insights proporciona información sobre drogas sugeridas y evidencia clínica para las variantes anotadas.
+                  Haga clic en "Ver CIViC Insights" para explorar las recomendaciones terapéuticas basadas en evidencia de CIViC.
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* OncoKB Insights */}
+          {activeTab === 'oncokb' && annotations.length > 0 && (
+            <div className="mt-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-semibold">OncoKB Insights</h3>
+                <button
+                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  onClick={() => {
+                    // Convert annotations to OncoKB format
+                    const oncoKbAnnotations = annotations.map(annotation => {
+                      // Extract chromosome, position, ref, alt from variant string
+                      // Format: chr7:55249071C>T
+                      const genomicMatch = annotation.variant?.match(/chr(\w+):(\d+)([ACGT])>([ACGT])/);
+                      
+                      // For genomic variants, use protein changes if available
+                      let variant = annotation.variant;
+                      if (genomicMatch && annotation.proteinChange) {
+                        variant = annotation.proteinChange;
+                      }
+                      
+                      return {
+                        geneSymbol: annotation.gene,
+                        variant: variant,
+                        alterationType: "MUTATION",
+                        referenceGenome: "GRCh37"
+                      };
+                    });
+                    
+                    // Navigate to OncoKB Insights page with annotations as URL parameter
+                    const encodedAnnotations = encodeURIComponent(JSON.stringify(oncoKbAnnotations));
+                    router.push(`/oncokb-insights?annotations=${encodedAnnotations}`);
+                  }}
+                >
+                  Ver OncoKB Insights
+                </button>
+              </div>
+              <div className="bg-green-50 border-l-4 border-green-400 p-4">
+                <p className="text-sm text-green-700">
+                  OncoKB Insights proporciona información detallada sobre terapias sugeridas, niveles de evidencia, y resúmenes de genes y variantes.
+                  Haga clic en "Ver OncoKB Insights" para explorar las recomendaciones terapéuticas basadas en la base de conocimiento de OncoKB.
+                </p>
               </div>
             </div>
           )}
@@ -449,7 +600,7 @@ export default function Home() {
                 </button>
               </div>
               <div className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
-                <pre className="text-sm">{JSON.stringify(fhirBundle, null, 2)}</pre>
+                <pre className="text-xs">{JSON.stringify(fhirBundle, null, 2)}</pre>
               </div>
             </div>
           )}

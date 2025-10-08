@@ -5,10 +5,11 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   // Only apply to API routes, except for study/upload and pdf/upload
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    // Exclude study/upload and pdf/upload routes from authentication
+    // Exclude specific routes from authentication
     if (
       request.nextUrl.pathname.startsWith('/api/study/upload') ||
       request.nextUrl.pathname.startsWith('/api/pdf/upload') ||
+      request.nextUrl.pathname.startsWith('/api/vcf/upload') ||
       request.nextUrl.pathname.startsWith('/api/annotate') ||
       request.nextUrl.pathname.startsWith('/api/fhir')
     ) {

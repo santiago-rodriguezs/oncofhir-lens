@@ -52,7 +52,7 @@ Create a `.env.local` file in the root directory with the following variables:
 ANTHROPIC_API_KEY=your-anthropic-api-key
 
 # Optional: OncoKB API Configuration
-# ONCOKB_API_KEY=your-oncokb-api-key
+# ONCOKB_AUTH_TOKEN=your-oncokb-auth-token
 # ONCOKB_BASE_URL=https://oncokb.org/api/v1
 
 # Optional: ClinVar E-utilities Configuration
@@ -70,7 +70,7 @@ ANTHROPIC_API_KEY=your-anthropic-api-key
 # GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 
 # Optional: OncoKB API Key
-# ONCOKB_API_KEY=your-oncokb-api-key
+# ONCOKB_AUTH_TOKEN=your-oncokb-auth-token
 
 # Google Vertex AI / Gemini Configuration
 GCP_VERTEX_LOCATION=us-central1

@@ -15,7 +15,7 @@ export function validateEnvironment(): { valid: boolean; messages: string[] } {
   
   const optionalVars = [
     'GOOGLE_APPLICATION_CREDENTIALS',
-    'ONCOKB_API_KEY',
+    'ONCOKB_AUTH_TOKEN',
     'GCP_VERTEX_LOCATION',
     'GEMINI_MODEL'
   ];
@@ -39,8 +39,8 @@ export function validateEnvironment(): { valid: boolean; messages: string[] } {
     messages.push('Warning: GOOGLE_APPLICATION_CREDENTIALS not set. Application Default Credentials will be used.');
   }
   
-  if (!process.env.ONCOKB_API_KEY) {
-    messages.push('Warning: ONCOKB_API_KEY not set. OncoKB annotation will not be available.');
+  if (!process.env.ONCOKB_AUTH_TOKEN) {
+    messages.push('Warning: ONCOKB_AUTH_TOKEN not set. OncoKB annotation will not be available.');
   }
   
   if (!process.env.GCP_VERTEX_LOCATION || !process.env.GEMINI_MODEL) {

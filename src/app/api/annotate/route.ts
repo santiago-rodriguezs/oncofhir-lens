@@ -27,7 +27,13 @@ const ConsolidatedAnnotationSchema = z.object({
       source: z.string()
     })
   ),
-  evidenceSources: z.array(z.string())
+  evidenceSources: z.array(z.string()),
+  // Campos adicionales de OncoKB
+  hotspot: z.boolean().optional(),
+  geneSummary: z.string().optional(),
+  variantSummary: z.string().optional(),
+  suggestedDrugs: z.string().optional(),
+  evidenceLevel: z.string().optional()
 });
 
 type ConsolidatedAnnotation = z.infer<typeof ConsolidatedAnnotationSchema>;
@@ -98,7 +104,13 @@ async function consolidateAnnotations(
         oncogenicity: oncoKB?.oncogenicity || 'Unknown',
         clinicalSignificance: clinVar?.clinicalSignificance || 'Unknown',
         therapies,
-        evidenceSources
+        evidenceSources,
+        // Campos adicionales de OncoKB
+        hotspot: oncoKB?.hotspot || false,
+        geneSummary: oncoKB?.geneSummary || '',
+        variantSummary: oncoKB?.variantSummary || '',
+        suggestedDrugs: oncoKB?.suggestedDrugs || '',
+        evidenceLevel: oncoKB?.evidenceLevel || 'Unknown'
       });
     }
     
@@ -117,7 +129,12 @@ Para cada variante devuelve:
     "oncogenicity": string,
     "clinicalSignificance": string,
     "therapies": [{ "drug": string, "level": string, "source": string }],
-    "evidenceSources": string[]
+    "evidenceSources": string[],
+    "hotspot": boolean,
+    "geneSummary": string,
+    "variantSummary": string,
+    "suggestedDrugs": string,
+    "evidenceLevel": string
   }
 ]
 
@@ -146,6 +163,11 @@ IMPORTANTE: Responde SOLO con JSON válido sin ningún formato markdown, sin bac
     4. clinicalSignificance: Significancia clínica según ClinVar o inferida
     5. therapies: Array de objetos {drug, level, source} con posibles tratamientos dirigidos
     6. evidenceSources: Array de fuentes de evidencia utilizadas
+    7. hotspot: Si es un hotspot conocido (true/false) según OncoKB
+    8. geneSummary: Resumen del gen según OncoKB
+    9. variantSummary: Resumen de la variante según OncoKB
+    10. suggestedDrugs: Drogas sugeridas como texto según OncoKB
+    11. evidenceLevel: Nivel de evidencia según OncoKB
     
     Responde SOLO con un array JSON de objetos, sin texto adicional.
   `;
@@ -178,7 +200,7 @@ export async function POST(request: NextRequest) {
     // Get OncoKB annotations
     console.log('📊 Fetching OncoKB annotations...');
     try {
-      if (process.env.ONCOKB_API_KEY && process.env.ONCOKB_BASE_URL) {
+      if (process.env.ONCOKB_AUTH_TOKEN && process.env.ONCOKB_BASE_URL) {
         oncoKBAnnotations = await fetchOncoKB(variants);
       } else {
         console.log('⚠️ OncoKB API not configured, using Sonnet fallback');

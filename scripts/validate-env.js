@@ -20,7 +20,8 @@ const requiredVars = [
 
 const optionalVars = [
   'GOOGLE_APPLICATION_CREDENTIALS',
-  'ONCOKB_API_KEY',
+  'ONCOKB_AUTH_TOKEN',
+  'ONCOKB_BASE_URL',
   'GCP_VERTEX_LOCATION',
   'GEMINI_MODEL'
 ];
@@ -69,8 +70,8 @@ if (!process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   console.log(chalk.yellow('ℹ GOOGLE_APPLICATION_CREDENTIALS not set. Application Default Credentials will be used.'));
 }
 
-if (!process.env.ONCOKB_API_KEY) {
-  console.log(chalk.yellow('ℹ ONCOKB_API_KEY not set. OncoKB annotation will not be available.'));
+if (!process.env.ONCOKB_AUTH_TOKEN) {
+  console.log(chalk.yellow('ℹ ONCOKB_AUTH_TOKEN not set. OncoKB annotation will not be available.'));
 }
 
 if (!process.env.GCP_VERTEX_LOCATION || !process.env.GEMINI_MODEL) {

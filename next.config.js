@@ -7,7 +7,7 @@ const nextConfig = {
     googleLocation: process.env.GOOGLE_LOCATION,
     healthcareDataset: process.env.HEALTHCARE_DATASET,
     fhirStore: process.env.FHIR_STORE,
-    oncokbApiKey: process.env.ONCOKB_API_KEY,
+    oncokbAuthToken: process.env.ONCOKB_AUTH_TOKEN,
     gcpVertexLocation: process.env.GCP_VERTEX_LOCATION,
     geminiModel: process.env.GEMINI_MODEL,
     demoSecret: process.env.DEMO_SECRET
