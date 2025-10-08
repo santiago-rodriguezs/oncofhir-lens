@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Variant, Annotation } from '@/lib/schemas';
+import { TabType } from '@/types/tabs';
 
 // Extended annotation type for OncoKB integration
 type ExtendedAnnotation = Annotation & {
@@ -12,6 +13,8 @@ type ExtendedAnnotation = Annotation & {
   proteinChange?: string;
 };
 import FileUploader from './FileUploader';
+import EnhancedAnnotationsView from '@/components/EnhancedAnnotationsView';
+import FhirBundleViewer from '@/components/FhirBundleViewer';
 
 export default function Home() {
   const router = useRouter();
@@ -23,21 +26,17 @@ export default function Home() {
   const [annotations, setAnnotations] = useState<ExtendedAnnotation[]>([]);
   const [fhirBundle, setFhirBundle] = useState<Record<string, any> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'variants' | 'annotations' | 'civic' | 'oncokb' | 'fhir'>('variants');
+  const [activeTab, setActiveTab] = useState<TabType>('variants');
   const [workflowMode, setWorkflowMode] = useState<'pdf' | 'vcf'>('pdf');
 
   // Process VCF
-  const handleProcessVcf = async () => {
-    if (!vcfText.trim()) {
-      setError('Por favor, ingrese el contenido VCF');
-      return;
-    }
-
+  const processVcf = async () => {
     setIsProcessing(true);
-    setProcessingType('variants');
+    setProcessingType('vcf');
     setError(null);
-
+    
     try {
+      // Parse VCF
       const response = await fetch('/api/vcf/upload', {
         method: 'POST',
         headers: {
@@ -45,17 +44,57 @@ export default function Home() {
         },
         body: JSON.stringify({ vcf: vcfText }),
       });
-
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al procesar el archivo VCF');
+        throw new Error(`Error: ${response.status}`);
       }
-
+      
       const data = await response.json();
       setVariants(data.variants);
       setActiveTab('variants');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } catch (error) {
+      console.error('Error processing VCF:', error);
+      setError(`Error processing VCF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  // Load rich example VCF
+  const loadRichExample = async () => {
+    setIsProcessing(true);
+    setProcessingType('loading example');
+    setError(null);
+    
+    try {
+      // Fetch the example VCF file
+      const response = await fetch('/examples/cancer_variants_rich.vcf');
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      const vcfContent = await response.text();
+      setVcfText(vcfContent);
+      
+      // Process the VCF content
+      const processResponse = await fetch('/api/vcf/upload', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ vcf: vcfContent }),
+      });
+      
+      if (!processResponse.ok) {
+        throw new Error(`Error: ${processResponse.status}`);
+      }
+      
+      const data = await processResponse.json();
+      setVariants(data.variants);
+      setActiveTab('variants');
+    } catch (error) {
+      console.error('Error loading example:', error);
+      setError(`Error loading example: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsProcessing(false);
     }
@@ -296,17 +335,26 @@ export default function Home() {
           
           <button
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-            onClick={handleProcessVcf}
+            onClick={processVcf}
             disabled={isProcessing || !vcfText.trim()}
           >
-            {isProcessing && processingType === 'variants' ? 'Procesando...' : 'Procesar VCF'}
+            {isProcessing && processingType === 'vcf' ? 'Procesando...' : 'Procesar VCF'}
           </button>
           
           <button 
             className="mt-4 ml-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:bg-gray-400"
             onClick={handleLoadSample}
+            disabled={isProcessing}
           >
             Cargar ejemplo VCF
+          </button>
+          
+          <button 
+            className="mt-4 ml-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
+            onClick={loadRichExample}
+            disabled={isProcessing}
+          >
+            Cargar ejemplo enriquecido
           </button>
         </div>
       )}
@@ -590,7 +638,7 @@ export default function Home() {
           {/* FHIR Bundle */}
           {activeTab === 'fhir' && fhirBundle && (
             <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold">FHIR Bundle</h3>
                 <button
                   className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
@@ -599,9 +647,7 @@ export default function Home() {
                   Copiar JSON
                 </button>
               </div>
-              <div className="bg-gray-100 p-4 rounded overflow-auto max-h-96">
-                <pre className="text-xs">{JSON.stringify(fhirBundle, null, 2)}</pre>
-              </div>
+              <FhirBundleViewer bundle={fhirBundle} />
             </div>
           )}
           
