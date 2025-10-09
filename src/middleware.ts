@@ -11,7 +11,8 @@ export function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/api/pdf/upload') ||
       request.nextUrl.pathname.startsWith('/api/vcf/upload') ||
       request.nextUrl.pathname.startsWith('/api/annotate') ||
-      request.nextUrl.pathname.startsWith('/api/fhir')
+      request.nextUrl.pathname.startsWith('/api/fhir') ||
+      request.nextUrl.pathname.startsWith('/api/cases')
     ) {
       return NextResponse.next();
     }

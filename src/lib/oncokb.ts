@@ -7,7 +7,7 @@ export const OncoKBAnnotationSchema = z.object({
   gene: z.string(),
   variant: z.string(),
   oncogenicity: z.enum(['Oncogenic', 'Likely Oncogenic', 'Unknown']),
-  evidenceLevel: z.enum(['1', '2', '3', '4', 'R1', 'R2', 'Unknown']),
+  evidenceLevel: z.string().optional(), // Changed to string to accept all OncoKB levels (1, 2, 3A, 3B, 4, R1, R2, etc.)
   therapies: z.array(
     z.object({
       drug: z.string(),
@@ -155,7 +155,7 @@ Para cada variante dada, devuelve JSON válido:
     "gene": string,
     "variant": string,
     "oncogenicity": "Oncogenic"|"Likely Oncogenic"|"Unknown",
-    "evidenceLevel": "1"|"2"|"3"|"4"|"R1"|"R2"|"Unknown",
+    "evidenceLevel": string, // Puede ser "1", "2", "3A", "3B", "4", "R1", "R2", etc.
     "therapies": [{ "drug": string, "level": string }],
     "cancerTypes": string[],
     "hotspot": boolean,
@@ -177,7 +177,7 @@ IMPORTANTE: Responde SOLO con JSON válido sin ningún formato markdown, sin bac
     1. gene: El gen afectado
     2. variant: La notación de la variante en formato chrom:pos:ref>alt
     3. oncogenicity: "Oncogenic", "Likely Oncogenic", o "Unknown"
-    4. evidenceLevel: "1", "2", "3", "4", "R1", "R2", o "Unknown"
+    4. evidenceLevel: Nivel de evidencia de OncoKB (puede ser "1", "2", "3A", "3B", "4", "R1", "R2", etc.)
     5. therapies: Array de objetos {drug, level} con posibles tratamientos dirigidos
     6. cancerTypes: Array de strings con tipos de cáncer relevantes
     7. hotspot: Boolean indicando si es un hotspot conocido

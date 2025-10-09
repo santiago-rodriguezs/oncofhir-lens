@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { parseVcfToVariants } from '@/lib/vcf';
 import { VariantSchema } from '@/lib/schemas';
+import { generateCaseId } from '@/lib/utils/ids';
+import { CaseService } from '@/lib/cases/service';
+import { annotateVariants } from '@/lib/annotate/service';
 
 // Define Node.js runtime
 export const runtime = 'nodejs';
@@ -62,8 +65,40 @@ export async function POST(request: NextRequest) {
       console.log(`📊 First variant: ${JSON.stringify(validatedVariants[0], null, 2)}`);
     }
     
-    // Return variants
-    return NextResponse.json({ variants: validatedVariants }, { status: 200 });
+    // Generate case ID
+    const caseId = generateCaseId();
+
+    // Annotate variants with OncoKB, ClinVar, and DGIdb
+    console.log('🔬 Annotating variants with external sources...');
+    const { evidence, therapies } = await annotateVariants(validatedVariants);
+    console.log(`✅ Generated ${evidence.length} evidence items and ${therapies.length} therapies`);
+
+    // Store case data
+    const caseData = await CaseService.create({
+      id: caseId,
+      metadata: {
+        reportSource: 'VCF',
+        parsingConfidence: 1.0,
+        timestamp: new Date().toISOString(),
+      },
+      variants: validatedVariants,
+      evidence,
+      therapies,
+      qc: {
+        source: 'VCF',
+        metrics: {
+          totalVariants: validatedVariants.length,
+        },
+        flags: [],
+        confidence: 1.0,
+      },
+    });
+
+    // Return case ID and variants
+    return NextResponse.json({
+      caseId,
+      variants: validatedVariants,
+    }, { status: 200 });
   } catch (error) {
     console.error('❌ Error processing VCF:', error);
     

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { pdfToText } from "@/lib/pdf";
 import { sonnetJson } from "@/lib/sonnet";
 import { VariantArraySchema } from "@/lib/schemas";
+import { generateCaseId } from '@/lib/utils/ids';
+import { CaseService } from '@/lib/cases/service';
+import { annotateVariants } from '@/lib/annotate/service';
 
 // Define Node.js runtime
 export const runtime = "nodejs";
@@ -71,8 +74,42 @@ export async function POST(request: NextRequest) {
       console.log("📊 First variant:", JSON.stringify(variants[0], null, 2));
     }
     
-    // Return variants
-    return NextResponse.json({ variants }, { status: 200 });
+    // Generate case ID
+    const caseId = generateCaseId();
+
+    // Annotate variants with OncoKB, ClinVar, and DGIdb
+    console.log('🔬 Annotating variants with external sources...');
+    const { evidence, therapies } = await annotateVariants(variants);
+    console.log(`✅ Generated ${evidence.length} evidence items and ${therapies.length} therapies`);
+
+    // Store case data
+    const caseData = await CaseService.create({
+      id: caseId,
+      metadata: {
+        reportSource: 'PDF',
+        parsingConfidence: 0.95, // PDF tiene menor confianza que VCF
+        timestamp: new Date().toISOString(),
+      },
+      variants,
+      evidence,
+      therapies,
+      qc: {
+        source: 'PDF',
+        metrics: {
+          totalVariants: variants.length,
+          textLength: text.length,
+        },
+        flags: [],
+        confidence: 0.95,
+      },
+      extractedText: [text], // Convertimos el texto en un array para mantener consistencia
+    });
+
+    // Return case ID and variants
+    return NextResponse.json({
+      caseId,
+      variants,
+    }, { status: 200 });
   } catch (error) {
     console.error("❌ Error processing PDF:", error);
     console.error("Stack trace:", error instanceof Error ? error.stack : "No stack trace");

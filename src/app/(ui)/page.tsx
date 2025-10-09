@@ -15,6 +15,7 @@ type ExtendedAnnotation = Annotation & {
 import FileUploader from './FileUploader';
 import EnhancedAnnotationsView from '@/components/EnhancedAnnotationsView';
 import FhirBundleViewer from '@/components/FhirBundleViewer';
+import { GeneticLoader } from '@/components/GeneticLoader';
 
 export default function Home() {
   const router = useRouter();
@@ -50,8 +51,8 @@ export default function Home() {
       }
       
       const data = await response.json();
-      setVariants(data.variants);
-      setActiveTab('variants');
+      // Redirigir al visualizador con el ID del caso
+      router.push(`/visualizer/${data.caseId}`);
     } catch (error) {
       console.error('Error processing VCF:', error);
       setError(`Error processing VCF: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -90,8 +91,8 @@ export default function Home() {
       }
       
       const data = await processResponse.json();
-      setVariants(data.variants);
-      setActiveTab('variants');
+      // Redirigir al visualizador con el ID del caso
+      router.push(`/visualizer/${data.caseId}`);
     } catch (error) {
       console.error('Error loading example:', error);
       setError(`Error loading example: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -108,7 +109,7 @@ export default function Home() {
     }
 
     setIsProcessing(true);
-    setProcessingType('variants');
+    setProcessingType('pdf');
     setError(null);
 
     try {
@@ -128,8 +129,8 @@ export default function Home() {
       }
 
       const data = await response.json();
-      setVariants(data.variants);
-      setActiveTab('variants');
+      // Redirigir al visualizador con el ID del caso
+      router.push(`/visualizer/${data.caseId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -153,7 +154,7 @@ export default function Home() {
     }
 
     setIsProcessing(true);
-    setProcessingType('annotations');
+    setProcessingType('annotating');
     setError(null);
 
     try {
@@ -255,6 +256,28 @@ export default function Home() {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Genetic Loader Overlay */}
+      {isProcessing && (
+        <GeneticLoader
+          message={
+            processingType === 'vcf' ? 'Analyzing Variants' :
+            processingType === 'loading example' ? 'Loading Example' :
+            processingType === 'pdf' ? 'Extracting Genomic Data' :
+            processingType === 'annotating' ? 'Annotating Variants' :
+            processingType === 'fhir' ? 'Generating FHIR Bundle' :
+            'Processing'
+          }
+          submessage={
+            processingType === 'vcf' ? 'Parsing VCF file and querying OncoKB, ClinVar, and DGIdb...' :
+            processingType === 'loading example' ? 'Loading sample genomic data...' :
+            processingType === 'pdf' ? 'Extracting text and identifying variants with AI...' :
+            processingType === 'annotating' ? 'Fetching clinical evidence from multiple databases...' :
+            processingType === 'fhir' ? 'Creating standardized FHIR resources...' :
+            'Please wait...'
+          }
+        />
+      )}
+      
       <h1 className="text-3xl font-bold mb-6">OncoFHIR Lens</h1>
       
       {/* Workflow Selector */}
