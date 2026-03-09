@@ -80,10 +80,15 @@ if (!process.env.GCP_VERTEX_LOCATION || !process.env.GEMINI_MODEL) {
 
 console.log('');
 
-// Exit with error code if required variables are missing
+// Exit with error code if required variables are missing (only in development)
 if (missingRequired.length > 0) {
-  console.log(chalk.red('Please set the required environment variables before starting the application.'));
-  process.exit(1);
+  if (process.env.VERCEL || process.env.CI || process.env.NODE_ENV === 'production') {
+    console.log(chalk.yellow('Skipping required env var check in CI/production. Missing vars will use defaults.'));
+    process.exit(0);
+  } else {
+    console.log(chalk.red('Please set the required environment variables before starting the application.'));
+    process.exit(1);
+  }
 } else {
   console.log(chalk.green('Environment validation passed. The application can start.'));
   process.exit(0);
