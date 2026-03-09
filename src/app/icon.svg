@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7C3AED;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="helix" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C4B5FD;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bg)"/>
+  <!-- DNA double helix (left strand) -->
+  <path d="M180 80 Q280 140 180 200 Q80 260 180 320 Q280 380 180 440"
+        stroke="url(#helix)" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <!-- DNA double helix (right strand) -->
+  <path d="M332 80 Q232 140 332 200 Q432 260 332 320 Q232 380 332 440"
+        stroke="url(#helix)" stroke-width="28" fill="none" stroke-linecap="round"/>
+  <!-- Cross rungs -->
+  <line x1="196" y1="140" x2="316" y2="140" stroke="#E0E7FF" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
+  <line x1="152" y1="200" x2="360" y2="200" stroke="#E0E7FF" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
+  <line x1="196" y1="260" x2="316" y2="260" stroke="#E0E7FF" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
+  <line x1="152" y1="320" x2="360" y2="320" stroke="#E0E7FF" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
+  <line x1="196" y1="380" x2="316" y2="380" stroke="#E0E7FF" stroke-width="14" stroke-linecap="round" opacity="0.8"/>
+  <!-- Lens/magnifying glass overlay -->
+  <circle cx="340" cy="360" r="80" stroke="#FCD34D" stroke-width="18" fill="none" opacity="0.9"/>
+  <line x1="396" y1="416" x2="440" y2="460" stroke="#FCD34D" stroke-width="22" stroke-linecap="round" opacity="0.9"/>
+</svg>
