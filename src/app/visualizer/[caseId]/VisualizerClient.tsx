@@ -12,6 +12,7 @@ import { AuditPanel } from '@/components/visualizer/AuditPanel';
 import { FhirPanel } from '@/components/visualizer/FhirPanel';
 import { ClinicalInsightsPanel } from '@/components/visualizer/ClinicalInsightsPanel';
 import { TumorBoardChat } from '@/components/visualizer/TumorBoardChat';
+import { HowItWorksPanel } from '@/components/visualizer/HowItWorksPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -112,6 +113,7 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
             <TabsTrigger value="fhir">FHIR Bundle</TabsTrigger>
             <TabsTrigger value="qc">QC & Provenance</TabsTrigger>
             <TabsTrigger value="audit">Audit & Notes</TabsTrigger>
+            <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
           </TabsList>
 
           <TabsContent value="summary">
@@ -230,6 +232,11 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
                   });
                 }}
               />
+            </Suspense>
+          </TabsContent>
+          <TabsContent value="how-it-works">
+            <Suspense fallback={<TabSkeleton />}>
+              <HowItWorksPanel />
             </Suspense>
           </TabsContent>
         </Tabs>
