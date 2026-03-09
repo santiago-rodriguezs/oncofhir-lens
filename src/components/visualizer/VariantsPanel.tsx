@@ -140,7 +140,7 @@ const columns: ColumnDef<Variant>[] = [
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(variant.hgvs)}
+              onClick={() => navigator.clipboard.writeText(variant.hgvs || '')}
             >
               Copy HGVS
             </DropdownMenuItem>

@@ -1,4 +1,5 @@
-import { Patient, Variant } from '@/types/fhir';
+import { Patient } from '@/types/fhir';
+import { Variant } from '@/core/models';
 import getConfig from 'next/config';
 
 // Get server-side runtime config
@@ -42,10 +43,10 @@ export async function summarizeFindings(
       return {
         gene: variant.gene,
         hgvs: variant.hgvs,
-        consequence: variant.consequence,
+        consequence: variant.effect,
         clinvar_significance: variant.clinvarSignificance || 'unknown',
         vaf: variant.vaf ? (variant.vaf * 100).toFixed(2) + '%' : 'unknown',
-        known_evidence: variant.evidenceUrls || []
+        known_evidence: variant.evidenceLinks || []
       };
     });
     
@@ -130,9 +131,9 @@ function simulateGeminiResponse(variants: Variant[]) {
   for (const variant of variants) {
     // EGFR mutations
     if (variant.gene === 'EGFR' && (
-      variant.hgvs.includes('L858R') || 
-      variant.hgvs.includes('exon19del') ||
-      variant.hgvs.includes('T790M')
+      (variant.hgvs || '').includes('L858R') ||
+      (variant.hgvs || '').includes('exon19del') ||
+      (variant.hgvs || '').includes('T790M')
     )) {
       response.push({
         issueTitle: `EGFR ${variant.hgvs} - Targetable Driver Mutation`,
@@ -147,7 +148,7 @@ function simulateGeminiResponse(variants: Variant[]) {
     }
     
     // BRAF V600E
-    if (variant.gene === 'BRAF' && variant.hgvs.includes('V600E')) {
+    if (variant.gene === 'BRAF' && (variant.hgvs || '').includes('V600E')) {
       response.push({
         issueTitle: 'BRAF V600E - Targetable Driver Mutation',
         rationale: 'BRAF V600E mutation is a well-established driver in melanoma and other cancers, predicting response to BRAF inhibitors.',
@@ -161,7 +162,7 @@ function simulateGeminiResponse(variants: Variant[]) {
     }
     
     // ALK fusions
-    if (variant.gene === 'ALK' && variant.hgvs.includes('fusion')) {
+    if (variant.gene === 'ALK' && (variant.hgvs || '').includes('fusion')) {
       response.push({
         issueTitle: 'ALK Fusion - Targetable Driver Mutation',
         rationale: 'ALK gene fusions are established drivers in a subset of non-small cell lung cancers and predict response to ALK inhibitors.',
@@ -175,7 +176,7 @@ function simulateGeminiResponse(variants: Variant[]) {
     }
     
     // KRAS G12C
-    if (variant.gene === 'KRAS' && variant.hgvs.includes('G12C')) {
+    if (variant.gene === 'KRAS' && (variant.hgvs || '').includes('G12C')) {
       response.push({
         issueTitle: 'KRAS G12C - Newly Targetable Mutation',
         rationale: 'KRAS G12C is now targetable with specific inhibitors in non-small cell lung cancer and other tumors.',
@@ -190,7 +191,7 @@ function simulateGeminiResponse(variants: Variant[]) {
     
     // BRCA1/2 mutations
     if ((variant.gene === 'BRCA1' || variant.gene === 'BRCA2') && 
-        (variant.consequence.includes('frameshift') || variant.consequence.includes('nonsense'))) {
+        ((variant.effect || '').includes('frameshift') || (variant.effect || '').includes('nonsense'))) {
       response.push({
         issueTitle: `${variant.gene} Loss-of-Function - PARP Inhibitor Sensitivity`,
         rationale: `Loss-of-function mutations in ${variant.gene} predict sensitivity to PARP inhibitors in ovarian, breast, pancreatic, and prostate cancers.`,
@@ -204,8 +205,8 @@ function simulateGeminiResponse(variants: Variant[]) {
     }
     
     // MSI-High markers (MLH1, MSH2, MSH6, PMS2)
-    if (['MLH1', 'MSH2', 'MSH6', 'PMS2'].includes(variant.gene) && 
-        (variant.consequence.includes('frameshift') || variant.consequence.includes('nonsense'))) {
+    if (variant.gene && ['MLH1', 'MSH2', 'MSH6', 'PMS2'].includes(variant.gene) && 
+        ((variant.effect || '').includes('frameshift') || (variant.effect || '').includes('nonsense'))) {
       response.push({
         issueTitle: 'Mismatch Repair Deficiency - Immunotherapy Response',
         rationale: 'Loss of mismatch repair proteins suggests microsatellite instability (MSI-High) status, which predicts response to immune checkpoint inhibitors.',

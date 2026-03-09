@@ -10,6 +10,8 @@ import { ReportViewerPanel } from '@/components/visualizer/ReportViewerPanel';
 import { QCPanel } from '@/components/visualizer/QCPanel';
 import { AuditPanel } from '@/components/visualizer/AuditPanel';
 import { FhirPanel } from '@/components/visualizer/FhirPanel';
+import { ClinicalInsightsPanel } from '@/components/visualizer/ClinicalInsightsPanel';
+import { TumorBoardChat } from '@/components/visualizer/TumorBoardChat';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -105,6 +107,8 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
             <TabsTrigger value="annotations">Annotations</TabsTrigger>
             <TabsTrigger value="therapies">Therapies</TabsTrigger>
             <TabsTrigger value="report">Report Viewer</TabsTrigger>
+            <TabsTrigger value="insights">Clinical Insights</TabsTrigger>
+            <TabsTrigger value="chat">Tumor Board</TabsTrigger>
             <TabsTrigger value="fhir">FHIR Bundle</TabsTrigger>
             <TabsTrigger value="qc">QC & Provenance</TabsTrigger>
             <TabsTrigger value="audit">Audit & Notes</TabsTrigger>
@@ -170,6 +174,28 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
                   // Handle highlight click
                   console.log('Clicked highlight:', highlight);
                 }}
+              />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="insights">
+            <Suspense fallback={<TabSkeleton />}>
+              <ClinicalInsightsPanel
+                variants={initialData.variants}
+                evidence={initialData.evidence}
+                therapies={initialData.therapies}
+                tumorType={initialData.metadata.tumorType}
+              />
+            </Suspense>
+          </TabsContent>
+
+          <TabsContent value="chat">
+            <Suspense fallback={<TabSkeleton />}>
+              <TumorBoardChat
+                variants={initialData.variants}
+                evidence={initialData.evidence}
+                therapies={initialData.therapies}
+                tumorType={initialData.metadata.tumorType}
               />
             </Suspense>
           </TabsContent>

@@ -11,23 +11,52 @@ export const CaseMetadata = z.object({
 });
 
 export const Variant = z.object({
+  // Identity
+  id: z.string().optional(),
+
+  // Core genomic coordinates (VCF standard naming)
   gene: z.string().optional(),
   chrom: z.string().optional(),
   pos: z.number().optional(),
   ref: z.string().optional(),
   alt: z.string().optional(),
+
+  // HGVS nomenclature
   hgvs: z.string().optional(),
   hgvs_c: z.string().optional(),
   hgvs_p: z.string().optional(),
+
+  // Functional annotation
   effect: z.string().optional(),
+  type: z.enum(['SNV', 'INDEL', 'CNV', 'SV']).optional(),
+
+  // Quality metrics
   vaf: z.number().optional(),
   depth: z.number().optional(),
+  quality: z.number().optional(),
+  filter: z.string().optional(),
   zygosity: z.string().optional(),
+
+  // Clinical annotations
   clinvarId: z.string().optional(),
+  clinvarSignificance: z.string().optional(),
   oncokbLevel: z.string().optional(),
   actionability: z.string().optional(),
+  evidenceLevel: z.string().optional(),
   evidenceLinks: z.array(z.string()).optional(),
-  type: z.enum(['SNV', 'INDEL', 'CNV', 'SV']).optional(),
+
+  // Rich annotation data
+  oncokbData: z.object({
+    oncogenic: z.string(),
+    mutationEffect: z.string().optional(),
+    highestSensitiveLevel: z.string().optional(),
+  }).optional(),
+  clinvarData: z.object({
+    clinicalSignificance: z.string(),
+    reviewStatus: z.string().optional(),
+    lastUpdated: z.string().optional(),
+    variantId: z.string().optional(),
+  }).optional(),
 });
 
 export const Evidence = z.object({

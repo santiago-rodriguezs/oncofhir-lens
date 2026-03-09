@@ -173,7 +173,7 @@ IMPORTANTE: Responde SOLO con JSON válido sin ningún formato markdown, sin bac
   `;
   
   return await sonnetJson(
-    "claude-sonnet-4-5-20250929",
+    "claude-sonnet-4-6-20250828",
     system,
     userPrompt,
     'ConsolidatedAnnotations',

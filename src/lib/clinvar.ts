@@ -46,15 +46,15 @@ export async function fetchClinVar(variants: Variant[]): Promise<ClinVarAnnotati
       });
       
       // Call ClinVar E-utilities API
-      const response = await fetch(
+      const response: Response = await fetch(
         `${process.env.CLINVAR_EUTILS}/esearch.fcgi?${params.toString()}`
       );
-      
+
       if (!response.ok) {
         throw new Error(`ClinVar API error: ${response.statusText}`);
       }
-      
-      const data = await response.json();
+
+      const data: any = await response.json();
       
       // Check if we have results
       if (data.esearchresult && data.esearchresult.idlist && data.esearchresult.idlist.length > 0) {
@@ -163,7 +163,7 @@ IMPORTANTE: Responde SOLO con JSON válido sin ningún formato markdown, sin bac
   `;
   
   return await sonnetJson(
-    "claude-sonnet-4-5-20250929",
+    "claude-sonnet-4-6-20250828",
     system,
     userPrompt,
     'ClinVarAnnotations',

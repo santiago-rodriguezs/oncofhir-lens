@@ -44,7 +44,8 @@ export async function sonnetJson<T>(
       max_tokens: 4000,
     });
     
-    let content = response.content[0].text;
+    const firstBlock = response.content[0];
+    let content = firstBlock.type === 'text' ? firstBlock.text : '';
     
     try {
       // Clean the content from markdown formatting
@@ -89,7 +90,8 @@ export async function sonnetJson<T>(
         max_tokens: 4000,
       });
       
-      let retryContent = retryResponse.content[0].text;
+      const retryBlock = retryResponse.content[0];
+      let retryContent = retryBlock.type === 'text' ? retryBlock.text : '';
       
       try {
         // Clean the retry content from markdown formatting

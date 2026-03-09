@@ -136,43 +136,17 @@ export interface DetectedIssue {
     reference: string;
     display?: string;
   };
-  identifiedDateTime: string;
-  evidence: string;
+  identifiedDateTime?: string;
+  evidence: string | Array<{ detail: Array<{ text: string }> }>;
   detail: string;
   reference?: string[];
-  mitigation?: string[];
+  mitigation?: string[] | Array<{ action: { text: string } }>;
   evidenceUrls?: string[];
 }
 
-// Application-specific types
-
-export interface Variant {
-  id: string;
-  gene: string;
-  hgvs: string;
-  chromosome: string;
-  position: number;
-  reference: string;
-  alternate: string;
-  consequence: string;
-  clinvarSignificance?: string;
-  vaf?: number;
-  quality?: number;
-  filter?: string;
-  evidenceLevel?: string;
-  evidenceUrls?: string[];
-  oncokbData?: {
-    oncogenic: string;
-    mutationEffect?: string;
-    highestSensitiveLevel?: string;
-  };
-  clinvarData?: {
-    clinicalSignificance: string;
-    reviewStatus?: string;
-    lastUpdated?: string;
-    variantId?: string;
-  };
-}
+// Application-specific types — Variant is the canonical model from @/core/models
+export type { Variant } from '@/core/models';
+import type { Variant } from '@/core/models';
 
 export interface CaseData {
   id: string;

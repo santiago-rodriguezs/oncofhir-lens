@@ -57,11 +57,11 @@ export async function POST(request: NextRequest) {
       reportText: text
     };
     
-    console.log("🧬 Calling Sonnet 4.5 for variant extraction...");
+    console.log("🧬 Calling Sonnet 4.6 for variant extraction...");
     
-    // Extract variants using Sonnet 4.5
+    // Extract variants using Sonnet 4.6
     const variants = await sonnetJson(
-      "claude-sonnet-4-5-20250929",
+      "claude-sonnet-4-6-20250828",
       system,
       JSON.stringify(user),
       "VariantArray",

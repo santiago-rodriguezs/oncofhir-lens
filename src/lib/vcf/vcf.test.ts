@@ -1,4 +1,4 @@
-import { parseVcf } from './vcf';
+import { parseVcf } from './parser';
 
 describe('VCF Parser', () => {
   const sampleVcf = `##fileformat=VCFv4.2
@@ -19,38 +19,36 @@ describe('VCF Parser', () => {
 
   it('should parse VCF content correctly', async () => {
     const variants = await parseVcf(sampleVcf);
-    
+
     expect(variants).toHaveLength(2);
-    
+
     // Check first variant
     expect(variants[0].gene).toBe('EGFR');
     expect(variants[0].hgvs).toBe('p.L858R');
-    expect(variants[0].chromosome).toBe('7');
-    expect(variants[0].position).toBe(55259515);
-    expect(variants[0].reference).toBe('T');
-    expect(variants[0].alternate).toBe('G');
-    expect(variants[0].consequence).toBe('missense_variant');
+    expect(variants[0].chrom).toBe('7');
+    expect(variants[0].pos).toBe(55259515);
+    expect(variants[0].ref).toBe('T');
+    expect(variants[0].alt).toBe('G');
+    expect(variants[0].effect).toBe('missense_variant');
     expect(variants[0].vaf).toBeCloseTo(0.35);
     expect(variants[0].quality).toBe(100);
-    expect(variants[0].filter).toBeUndefined(); // PASS filter is removed
-    
+
     // Check second variant
     expect(variants[1].gene).toBe('TP53');
     expect(variants[1].hgvs).toBe('p.R273H');
-    expect(variants[1].chromosome).toBe('17');
-    expect(variants[1].position).toBe(7577120);
-    expect(variants[1].reference).toBe('G');
-    expect(variants[1].alternate).toBe('A');
-    expect(variants[1].consequence).toBe('missense_variant');
+    expect(variants[1].chrom).toBe('17');
+    expect(variants[1].pos).toBe(7577120);
+    expect(variants[1].ref).toBe('G');
+    expect(variants[1].alt).toBe('A');
+    expect(variants[1].effect).toBe('missense_variant');
     expect(variants[1].vaf).toBeCloseTo(0.42);
     expect(variants[1].quality).toBe(95);
-    expect(variants[1].filter).toBeUndefined(); // PASS filter is removed
   });
 
   it('should handle empty or invalid VCF content', async () => {
     const emptyVariants = await parseVcf('');
     expect(emptyVariants).toHaveLength(0);
-    
+
     const headerOnlyVariants = await parseVcf('#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO');
     expect(headerOnlyVariants).toHaveLength(0);
   });

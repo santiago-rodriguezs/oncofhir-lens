@@ -101,8 +101,8 @@ export function useFilteredCivicResults(
       const existingDrug = drugMap.get(drug.name);
       
       // Update best evidence level if this one is better
-      const levels = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-      if (levels[drug.bestEvidenceLevel.charAt(0)] > levels[existingDrug.bestEvidenceLevel.charAt(0)]) {
+      const levels: Record<string, number> = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+      if ((levels[drug.bestEvidenceLevel.charAt(0)] || 0) > (levels[existingDrug.bestEvidenceLevel.charAt(0)] || 0)) {
         existingDrug.bestEvidenceLevel = drug.bestEvidenceLevel;
       }
       
@@ -135,8 +135,8 @@ export function useFilteredCivicResults(
   // Convert map back to array and sort
   const filteredDrugs = Array.from(drugMap.values()).sort((a, b) => {
     // Sort by best evidence level (A is better than E)
-    const levels = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
-    const levelDiff = levels[b.bestEvidenceLevel.charAt(0)] - levels[a.bestEvidenceLevel.charAt(0)];
+    const levels: Record<string, number> = { 'A': 5, 'B': 4, 'C': 3, 'D': 2, 'E': 1 };
+    const levelDiff = (levels[b.bestEvidenceLevel.charAt(0)] || 0) - (levels[a.bestEvidenceLevel.charAt(0)] || 0);
     if (levelDiff !== 0) return levelDiff;
     
     // Then by evidence count

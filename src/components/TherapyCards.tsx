@@ -28,9 +28,9 @@ export default function TherapyCards({ issues }: TherapyCardsProps) {
               <div className="ml-3">
                 <h3 className="text-lg font-medium text-gray-900">{issue.detail}</h3>
                 <div className="mt-2 text-sm text-gray-600">
-                  <p>{issue.evidence}</p>
+                  <p>{typeof issue.evidence === 'string' ? issue.evidence : ''}</p>
                 </div>
-                
+
                 {issue.mitigation && issue.mitigation.length > 0 && (
                   <div className="mt-4">
                     <h4 className="text-sm font-medium text-gray-700">Terapias Sugeridas:</h4>
@@ -38,7 +38,7 @@ export default function TherapyCards({ issues }: TherapyCardsProps) {
                       {issue.mitigation.map((therapy, idx) => (
                         <li key={idx} className="flex items-start">
                           <CheckCircleIcon className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
-                          <span className="text-sm">{therapy}</span>
+                          <span className="text-sm">{typeof therapy === 'string' ? therapy : therapy.action.text}</span>
                         </li>
                       ))}
                     </ul>

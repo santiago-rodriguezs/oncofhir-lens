@@ -12,7 +12,10 @@ export const VariantSchema = z.object({
   hgvs_p: z.string().optional(),
 });
 
-export type Variant = z.infer<typeof VariantSchema>;
+export type VariantInput = z.infer<typeof VariantSchema>;
+
+/** @deprecated Use VariantInput instead */
+export type Variant = VariantInput;
 
 export const VariantArraySchema = z.array(VariantSchema);
 
@@ -22,6 +25,7 @@ export const AnnotationSchema = z.object({
   variant: z.string(),
   cancerTypes: z.array(z.string()).optional(),
   oncogenicity: z.enum(['Oncogenic', 'Likely Oncogenic', 'Unknown']).optional(),
+  evidenceLevel: z.string().optional(),
   actionability: z
     .array(
       z.object({

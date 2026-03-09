@@ -1,257 +1,24 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Variant, Annotation } from '@/lib/schemas';
-import { TabType } from '@/types/tabs';
-
-// Extended annotation type for OncoKB integration
-type ExtendedAnnotation = Annotation & {
-  hotspot?: boolean;
-  evidenceLevel?: string;
-  suggestedDrugs?: string;
-  proteinChange?: string;
-};
+import { useVcfProcessor } from '@/lib/hooks/useVcfProcessor';
+import { usePdfProcessor } from '@/lib/hooks/usePdfProcessor';
 import FileUploader from './FileUploader';
-import EnhancedAnnotationsView from '@/components/EnhancedAnnotationsView';
-import FhirBundleViewer from '@/components/FhirBundleViewer';
 import { GeneticLoader } from '@/components/GeneticLoader';
 
 export default function Home() {
-  const router = useRouter();
-  const [vcfText, setVcfText] = useState<string>('');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [processingType, setProcessingType] = useState<string>('');
-  const [variants, setVariants] = useState<Variant[]>([]);
-  const [annotations, setAnnotations] = useState<ExtendedAnnotation[]>([]);
-  const [fhirBundle, setFhirBundle] = useState<Record<string, any> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('variants');
   const [workflowMode, setWorkflowMode] = useState<'pdf' | 'vcf'>('pdf');
 
-  // Process VCF
-  const processVcf = async () => {
-    setIsProcessing(true);
-    setProcessingType('vcf');
-    setError(null);
-    
-    try {
-      // Parse VCF
-      const response = await fetch('/api/vcf/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ vcf: vcfText }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      // Redirigir al visualizador con el ID del caso
-      router.push(`/visualizer/${data.caseId}`);
-    } catch (error) {
-      console.error('Error processing VCF:', error);
-      setError(`Error processing VCF: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  // Load rich example VCF
-  const loadRichExample = async () => {
-    setIsProcessing(true);
-    setProcessingType('loading example');
-    setError(null);
-    
-    try {
-      // Fetch the example VCF file
-      const response = await fetch('/examples/cancer_variants_rich.vcf');
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
-      }
-      
-      const vcfContent = await response.text();
-      setVcfText(vcfContent);
-      
-      // Process the VCF content
-      const processResponse = await fetch('/api/vcf/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ vcf: vcfContent }),
-      });
-      
-      if (!processResponse.ok) {
-        throw new Error(`Error: ${processResponse.status}`);
-      }
-      
-      const data = await processResponse.json();
-      // Redirigir al visualizador con el ID del caso
-      router.push(`/visualizer/${data.caseId}`);
-    } catch (error) {
-      console.error('Error loading example:', error);
-      setError(`Error loading example: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  // Process PDF
-  const handleProcessPdf = async () => {
-    if (!selectedFile) {
-      setError('Por favor, seleccione un archivo PDF');
-      return;
-    }
+  const vcf = useVcfProcessor();
+  const pdf = usePdfProcessor();
 
-    setIsProcessing(true);
-    setProcessingType('pdf');
-    setError(null);
+  const isProcessing = vcf.isProcessing || pdf.isProcessing;
+  const error = vcf.error || pdf.error;
 
-    try {
-      // Create form data
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      // Call the API
-      const response = await fetch('/api/pdf/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al procesar el archivo PDF');
-      }
-
-      const data = await response.json();
-      // Redirigir al visualizador con el ID del caso
-      router.push(`/visualizer/${data.caseId}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  // Handle file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      setSelectedFile(files[0]);
-    }
-  };
-
-  // Annotate variants
-  const handleAnnotate = async () => {
-    if (variants.length === 0) {
-      setError('Primero debe procesar un archivo');
-      return;
-    }
-
-    setIsProcessing(true);
-    setProcessingType('annotating');
-    setError(null);
-
-    try {
-      const response = await fetch('/api/annotate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ variants }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al anotar las variantes');
-      }
-
-      const data = await response.json();
-      setAnnotations(data.annotations);
-      setActiveTab('annotations');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Generate FHIR Bundle
-  const handleGenerateFhir = async () => {
-    if (annotations.length === 0) {
-      setError('Primero debe anotar las variantes');
-      return;
-    }
-
-    setIsProcessing(true);
-    setProcessingType('fhir');
-    setError(null);
-
-    try {
-      const response = await fetch('/api/fhir/compose', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          annotations,
-          patient: {
-            id: 'example-patient',
-            name: 'Patient Example',
-          },
-          specimen: {
-            id: 'example-specimen',
-            type: 'Blood',
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error al generar el Bundle FHIR');
-      }
-
-      const data = await response.json();
-      setFhirBundle(data.bundle);
-      setActiveTab('fhir');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Copy JSON to clipboard
-  const handleCopyJson = () => {
-    if (!fhirBundle) return;
-    
-    navigator.clipboard.writeText(JSON.stringify(fhirBundle, null, 2))
-      .then(() => {
-        alert('JSON copiado al portapapeles');
-      })
-      .catch((err) => {
-        console.error('Error al copiar:', err);
-        setError('Error al copiar al portapapeles');
-      });
-  };
-  
-  // Load sample VCF
-  const handleLoadSample = async () => {
-    try {
-      const response = await fetch('/sample.vcf');
-      if (!response.ok) {
-        throw new Error('Error al cargar el archivo de ejemplo');
-      }
-      const text = await response.text();
-      setVcfText(text);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error desconocido');
-    }
+  const processingMessage = () => {
+    if (vcf.isProcessing) return { message: 'Analyzing Variants', submessage: 'Parsing VCF file and querying OncoKB, ClinVar, and DGIdb...' };
+    if (pdf.isProcessing) return { message: 'Extracting Genomic Data', submessage: 'Extracting text and identifying variants with AI...' };
+    return { message: 'Processing', submessage: 'Please wait...' };
   };
 
   return (
@@ -259,27 +26,13 @@ export default function Home() {
       {/* Genetic Loader Overlay */}
       {isProcessing && (
         <GeneticLoader
-          message={
-            processingType === 'vcf' ? 'Analyzing Variants' :
-            processingType === 'loading example' ? 'Loading Example' :
-            processingType === 'pdf' ? 'Extracting Genomic Data' :
-            processingType === 'annotating' ? 'Annotating Variants' :
-            processingType === 'fhir' ? 'Generating FHIR Bundle' :
-            'Processing'
-          }
-          submessage={
-            processingType === 'vcf' ? 'Parsing VCF file and querying OncoKB, ClinVar, and DGIdb...' :
-            processingType === 'loading example' ? 'Loading sample genomic data...' :
-            processingType === 'pdf' ? 'Extracting text and identifying variants with AI...' :
-            processingType === 'annotating' ? 'Fetching clinical evidence from multiple databases...' :
-            processingType === 'fhir' ? 'Creating standardized FHIR resources...' :
-            'Please wait...'
-          }
+          message={processingMessage().message}
+          submessage={processingMessage().submessage}
         />
       )}
-      
+
       <h1 className="text-3xl font-bold mb-6">OncoFHIR Lens</h1>
-      
+
       {/* Workflow Selector */}
       <div className="mb-6">
         <div className="flex border-b border-gray-200">
@@ -297,12 +50,12 @@ export default function Home() {
           </button>
         </div>
       </div>
-      
+
       {/* PDF Input - Primary Workflow */}
       {workflowMode === 'pdf' && (
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Subir estudio genómico (PDF)</h2>
-          
+
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Seleccionar archivo PDF
@@ -310,7 +63,7 @@ export default function Home() {
             <input
               type="file"
               accept=".pdf"
-              onChange={handleFileChange}
+              onChange={pdf.handleFileChange}
               className="block w-full text-sm text-gray-500
                 file:mr-4 file:py-2 file:px-4
                 file:rounded-md file:border-0
@@ -320,363 +73,75 @@ export default function Home() {
               disabled={isProcessing}
             />
           </div>
-          
+
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
             <p className="text-sm text-yellow-700">
               Esta función extrae variantes de un PDF clínico usando Claude Sonnet 4.5.
               Los mejores resultados se obtienen con informes de texto seleccionable (no escaneados).
             </p>
           </div>
-          
+
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-            onClick={handleProcessPdf}
-            disabled={isProcessing || !selectedFile}
+            onClick={pdf.processPdf}
+            disabled={isProcessing || !pdf.selectedFile}
           >
-            {isProcessing && processingType === 'variants' ? 'Procesando...' : 'Extraer variantes'}
+            {pdf.isProcessing ? 'Procesando...' : 'Extraer variantes'}
           </button>
         </div>
       )}
-      
+
       {/* VCF Input - Secondary Workflow */}
       {workflowMode === 'vcf' && (
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-2">Procesar VCF</h2>
-          
+
           {/* Dropzone para subir archivos */}
-          <FileUploader onFileLoaded={setVcfText} disabled={isProcessing} />
-          
+          <FileUploader onFileLoaded={vcf.setVcfText} disabled={isProcessing} />
+
           <div className="mt-4">
             <h3 className="text-md font-medium mb-2">O pegue el contenido VCF:</h3>
             <textarea
               className="w-full h-40 p-2 border border-gray-300 rounded"
               placeholder="Pegue el contenido del archivo VCF aquí..."
-              value={vcfText}
-              onChange={(e) => setVcfText(e.target.value)}
+              value={vcf.vcfText}
+              onChange={(e) => vcf.setVcfText(e.target.value)}
             />
           </div>
-          
+
           <button
             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-            onClick={processVcf}
-            disabled={isProcessing || !vcfText.trim()}
+            onClick={vcf.processVcf}
+            disabled={isProcessing || !vcf.vcfText.trim()}
           >
-            {isProcessing && processingType === 'vcf' ? 'Procesando...' : 'Procesar VCF'}
+            {vcf.isProcessing ? 'Procesando...' : 'Procesar VCF'}
           </button>
-          
-          <button 
+
+          <button
             className="mt-4 ml-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:bg-gray-400"
-            onClick={handleLoadSample}
+            onClick={vcf.loadSample}
             disabled={isProcessing}
           >
             Cargar ejemplo VCF
           </button>
-          
-          <button 
+
+          <button
             className="mt-4 ml-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
-            onClick={loadRichExample}
+            onClick={vcf.loadRichExample}
             disabled={isProcessing}
           >
             Cargar ejemplo enriquecido
           </button>
         </div>
       )}
-      
+
       {/* Error display */}
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
         </div>
       )}
-      
-      {/* Results Tabs */}
-      {variants.length > 0 && (
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
-              <button
-                className={`mr-2 py-2 px-4 font-medium ${
-                  activeTab === 'variants'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('variants')}
-              >
-                Variantes
-              </button>
-              <button
-                className={`mr-2 py-2 px-4 font-medium ${
-                  activeTab === 'annotations'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('annotations')}
-                disabled={annotations.length === 0}
-              >
-                Anotaciones
-              </button>
-              <button
-                className={`py-2 px-4 font-medium ${
-                  activeTab === 'civic'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('civic')}
-                disabled={annotations.length === 0}
-              >
-                CIViC Insights
-              </button>
-              <button
-                className={`py-2 px-4 font-medium ${
-                  activeTab === 'oncokb'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('oncokb')}
-                disabled={annotations.length === 0}
-              >
-                OncoKB Insights
-              </button>
-              <button
-                className={`py-2 px-4 font-medium ${
-                  activeTab === 'fhir'
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('fhir')}
-                disabled={!fhirBundle}
-              >
-                FHIR Bundle
-              </button>
-            </nav>
-          </div>
-          
-          {/* Variants Table */}
-          {activeTab === 'variants' && (
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold">Variantes ({variants.length})</h3>
-                <button
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
-                  onClick={handleAnnotate}
-                  disabled={isProcessing || variants.length === 0}
-                >
-                  {isProcessing && processingType === 'annotations' ? 'Anotando...' : 'Anotar con OncoKB/Sonnet'}
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="py-2 px-4 border-b">Gen</th>
-                      <th className="py-2 px-4 border-b">Cromosoma</th>
-                      <th className="py-2 px-4 border-b">Posición</th>
-                      <th className="py-2 px-4 border-b">Ref</th>
-                      <th className="py-2 px-4 border-b">Alt</th>
-                      <th className="py-2 px-4 border-b">VAF</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {variants.map((variant, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : ''}>
-                        <td className="py-2 px-4 border-b">{variant.gene || 'N/A'}</td>
-                        <td className="py-2 px-4 border-b">{variant.chrom}</td>
-                        <td className="py-2 px-4 border-b">{variant.pos}</td>
-                        <td className="py-2 px-4 border-b">{variant.ref}</td>
-                        <td className="py-2 px-4 border-b">{variant.alt}</td>
-                        <td className="py-2 px-4 border-b">
-                          {variant.vaf !== undefined ? `${(variant.vaf * 100).toFixed(2)}%` : 'N/A'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          
-          {/* Annotations */}
-          {activeTab === 'annotations' && annotations.length > 0 && (
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold">Anotaciones ({annotations.length})</h3>
-                <button
-                  className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400"
-                  onClick={handleGenerateFhir}
-                  disabled={isProcessing || annotations.length === 0}
-                >
-                  {isProcessing && processingType === 'fhir' ? 'Generando...' : 'Generar FHIR Bundle'}
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gen</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variante</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Oncogenicidad</th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipos de Cáncer</th>
-                      {activeTab === 'oncokb' && (
-                        <>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hotspot</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nivel de Evidencia</th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Drogas Sugeridas</th>
-                        </>
-                      )}
-                      {activeTab !== 'oncokb' && (
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Accionabilidad</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {annotations.map((annotation, index) => (
-                      <tr key={index}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{annotation.gene}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{annotation.variant}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{annotation.oncogenicity}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {annotation.cancerTypes?.length ? annotation.cancerTypes.join(', ') : 'N/A'}
-                        </td>
-                        {activeTab === 'oncokb' && (
-                          <>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {annotation.hotspot ? (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                  Sí
-                                </span>
-                              ) : 'No'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {annotation.evidenceLevel !== 'Unknown' ? (
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  annotation.evidenceLevel === '1' ? 'bg-green-100 text-green-800' :
-                                  annotation.evidenceLevel === '2' ? 'bg-blue-100 text-blue-800' :
-                                  annotation.evidenceLevel === '3' ? 'bg-yellow-100 text-yellow-800' :
-                                  annotation.evidenceLevel === '4' ? 'bg-orange-100 text-orange-800' :
-                                  annotation.evidenceLevel.startsWith('R') ? 'bg-red-100 text-red-800' :
-                                  'bg-gray-100 text-gray-800'
-                                }`}>
-                                  {annotation.evidenceLevel}
-                                </span>
-                              ) : 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {annotation.suggestedDrugs || 'N/A'}
-                            </td>
-                          </>
-                        )}
-                        {activeTab !== 'oncokb' && (
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {annotation.actionability?.length ? 
-                              annotation.actionability.map(action => `${action.drug} (${action.level})`).join(', ') : 
-                              'N/A'
-                            }
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-          
-          {/* CIViC Insights */}
-          {activeTab === 'civic' && annotations.length > 0 && (
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold">CIViC Insights</h3>
-                <button
-                  className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
-                  onClick={() => {
-                    // Convert annotations to CivicAnnotation format
-                    const civicAnnotations = annotations.map(annotation => ({
-                      geneSymbol: annotation.gene,
-                      variant: annotation.variant,
-                      tumorType: annotation.cancerTypes?.[0]
-                    }));
-                    
-                    // Navigate to CIViC Insights page with annotations as URL parameter
-                    const encodedAnnotations = encodeURIComponent(JSON.stringify(civicAnnotations));
-                    router.push(`/civic-insights?annotations=${encodedAnnotations}`);
-                  }}
-                >
-                  Ver CIViC Insights
-                </button>
-              </div>
-              <div className="bg-indigo-50 border-l-4 border-indigo-400 p-4">
-                <p className="text-sm text-indigo-700">
-                  CIViC Insights proporciona información sobre drogas sugeridas y evidencia clínica para las variantes anotadas.
-                  Haga clic en "Ver CIViC Insights" para explorar las recomendaciones terapéuticas basadas en evidencia de CIViC.
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {/* OncoKB Insights */}
-          {activeTab === 'oncokb' && annotations.length > 0 && (
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-semibold">OncoKB Insights</h3>
-                <button
-                  className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  onClick={() => {
-                    // Convert annotations to OncoKB format
-                    const oncoKbAnnotations = annotations.map(annotation => {
-                      // Extract chromosome, position, ref, alt from variant string
-                      // Format: chr7:55249071C>T
-                      const genomicMatch = annotation.variant?.match(/chr(\w+):(\d+)([ACGT])>([ACGT])/);
-                      
-                      // For genomic variants, use protein changes if available
-                      let variant = annotation.variant;
-                      if (genomicMatch && annotation.proteinChange) {
-                        variant = annotation.proteinChange;
-                      }
-                      
-                      return {
-                        geneSymbol: annotation.gene,
-                        variant: variant,
-                        alterationType: "MUTATION",
-                        referenceGenome: "GRCh37"
-                      };
-                    });
-                    
-                    // Navigate to OncoKB Insights page with annotations as URL parameter
-                    const encodedAnnotations = encodeURIComponent(JSON.stringify(oncoKbAnnotations));
-                    router.push(`/oncokb-insights?annotations=${encodedAnnotations}`);
-                  }}
-                >
-                  Ver OncoKB Insights
-                </button>
-              </div>
-              <div className="bg-green-50 border-l-4 border-green-400 p-4">
-                <p className="text-sm text-green-700">
-                  OncoKB Insights proporciona información detallada sobre terapias sugeridas, niveles de evidencia, y resúmenes de genes y variantes.
-                  Haga clic en "Ver OncoKB Insights" para explorar las recomendaciones terapéuticas basadas en la base de conocimiento de OncoKB.
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {/* FHIR Bundle */}
-          {activeTab === 'fhir' && fhirBundle && (
-            <div className="mt-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">FHIR Bundle</h3>
-                <button
-                  className="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-                  onClick={handleCopyJson}
-                >
-                  Copiar JSON
-                </button>
-              </div>
-              <FhirBundleViewer bundle={fhirBundle} />
-            </div>
-          )}
-          
-        </div>
-      )}
-      
+
       {/* Footer */}
       <div className="mt-8 pt-4 border-t border-gray-200 text-center text-gray-500 text-sm">
         OncoFHIR Lens - Powered by Claude Sonnet 4.5

@@ -1,14 +1,14 @@
-import { Variant, VariantSchema } from './schemas';
+import { VariantInput, VariantSchema } from './schemas';
 
 /**
  * Parse VCF text content to array of Variant objects
  * @param vcfText - VCF file content as string
  * @returns Array of parsed variants
  */
-export function parseVcfToVariants(vcfText: string): Variant[] {
+export function parseVcfToVariants(vcfText: string): VariantInput[] {
   const lines = vcfText.split('\n');
-  const variants: Variant[] = [];
-  const rawVariants: Variant[] = [];
+  const variants: VariantInput[] = [];
+  const rawVariants: VariantInput[] = [];
   
   console.log(`Processing VCF with ${lines.length} lines`);
   
@@ -50,7 +50,7 @@ export function parseVcfToVariants(vcfText: string): Variant[] {
         const alt = altAlleles[i];
         
         // Basic variant data
-        const variant: Variant = {
+        const variant: VariantInput = {
           chrom,
           pos: parseInt(posStr, 10),
           ref,
@@ -150,7 +150,7 @@ export function parseVcfToVariants(vcfText: string): Variant[] {
     // If Zod validation fails but we have variants, return them anyway
     if (variants.length > 0) {
       console.warn('Returning unvalidated variants as fallback');
-      return variants as Variant[];
+      return variants as VariantInput[];
     }
     
     // If we have no variants, throw the original error

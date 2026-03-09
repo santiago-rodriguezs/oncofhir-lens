@@ -1,4 +1,5 @@
-import { Patient, Specimen, Observation, DetectedIssue, Variant } from '@/types/fhir';
+import { Patient, Specimen, Observation, DetectedIssue } from '@/types/fhir';
+import { Variant } from '@/core/models';
 import { v4 as uuidv4 } from 'uuid';
 import { fhirClient } from './client';
 
@@ -165,11 +166,11 @@ export async function createGenomicObservation(params: ObservationParams): Promi
             coding: [
               {
                 system: 'http://www.genenames.org',
-                code: params.variant.gene,
-                display: params.variant.gene,
+                code: params.variant.gene || 'Unknown',
+                display: params.variant.gene || 'Unknown',
               },
             ],
-            text: params.variant.gene,
+            text: params.variant.gene || 'Unknown',
           },
         },
         // DNA change (HGVS)
@@ -248,6 +249,7 @@ export async function createGenomicObservation(params: ObservationParams): Promi
           text: 'Clinical Significance',
         },
         valueCodeableConcept: {
+          coding: [],
           text: params.variant.clinvarSignificance,
         },
       });

@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     
     // Call Sonnet to generate FHIR bundle
     const bundle = await sonnetJson<FhirBundle>(
-      "claude-sonnet-4-5-20250929",
+      "claude-sonnet-4-6-20250828",
       system,
       userPrompt,
       'FhirBundle',

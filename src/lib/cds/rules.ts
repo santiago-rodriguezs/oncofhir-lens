@@ -1,4 +1,4 @@
-import { Variant } from '@/types/fhir';
+import { Variant } from '@/core/models';
 
 /**
  * Simple rule-based system for generating therapy suggestions
@@ -165,8 +165,8 @@ export function applySimpleRules(variants: Variant[], patientId: string) {
     for (const rule of THERAPY_RULES) {
       // Check if variant matches rule criteria
       const geneMatch = variant.gene === rule.gene;
-      const variantMatch = !rule.variant || variant.hgvs.includes(rule.variant);
-      const consequenceMatch = !rule.consequence || variant.consequence.includes(rule.consequence);
+      const variantMatch = !rule.variant || (variant.hgvs || '').includes(rule.variant);
+      const consequenceMatch = !rule.consequence || (variant.effect || '').includes(rule.consequence);
       
       if (geneMatch && variantMatch && consequenceMatch) {
         detectedIssues.push({

@@ -214,7 +214,7 @@ const FhirBundleViewer: React.FC<FhirBundleViewerProps> = ({ bundle }) => {
                     <div className="flex space-x-2">
                       <button
                         className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
-                        onClick={() => setExpandedResource(expandedResource === resource.id ? null : resource.id)}
+                        onClick={() => setExpandedResource(expandedResource === resource.id ? null : resource.id ?? null)}
                       >
                         {expandedResource === resource.id ? 'Cerrar' : 'Ver'}
                       </button>

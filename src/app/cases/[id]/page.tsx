@@ -5,7 +5,8 @@ import { useParams } from 'next/navigation';
 import VariantTable from '@/components/VariantTable';
 import VariantDrawer from '@/components/VariantDrawer';
 import TherapyCards from '@/components/TherapyCards';
-import { Variant, DetectedIssue, CaseData } from '@/types/fhir';
+import { DetectedIssue, CaseData } from '@/types/fhir';
+import { Variant } from '@/core/models';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export default function CasePage() {

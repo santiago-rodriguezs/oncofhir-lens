@@ -1,4 +1,4 @@
-import { Variant } from '@/types/fhir';
+import { Variant } from '@/core/models';
 import { v4 as uuidv4 } from 'uuid';
 
 // Interface for VCF line data
@@ -188,9 +188,17 @@ function convertToVariant(vcfLine: VcfLine): Variant {
   
   if (vcfLine.samples && Object.keys(vcfLine.samples).length > 0) {
     const firstSample = vcfLine.samples[Object.keys(vcfLine.samples)[0]];
-    
-    if (firstSample.AD) {
-      // AD is typically formatted as "ref,alt"
+
+    // Try explicit VAF field first
+    if (firstSample.VAF) {
+      const vafValue = parseFloat(firstSample.VAF);
+      if (!isNaN(vafValue)) {
+        vaf = vafValue;
+      }
+    }
+
+    // Fall back to calculating from AD (allele depth)
+    if (vaf === undefined && firstSample.AD) {
       const depths = firstSample.AD.split(',').map(Number);
       if (depths.length >= 2) {
         const altDepth = depths[1];
@@ -207,11 +215,11 @@ function convertToVariant(vcfLine: VcfLine): Variant {
     id: uuidv4(),
     gene,
     hgvs,
-    chromosome: vcfLine.chrom,
-    position: vcfLine.pos,
-    reference: vcfLine.ref,
-    alternate: vcfLine.alt,
-    consequence,
+    chrom: vcfLine.chrom,
+    pos: vcfLine.pos,
+    ref: vcfLine.ref,
+    alt: vcfLine.alt,
+    effect: consequence,
     vaf,
     quality: vcfLine.qual,
     filter: vcfLine.filter,

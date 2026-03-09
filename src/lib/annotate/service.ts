@@ -1,4 +1,4 @@
-import { Variant as SchemaVariant } from '@/lib/schemas';
+import { VariantInput } from '@/lib/schemas';
 import { Variant, Evidence, Therapy } from '@/core/models';
 import { fetchOncoKB, annotateOncoKBWithSonnet } from '@/lib/oncokb';
 import { fetchClinVar, annotateClinVarWithSonnet } from '@/lib/clinvar';
@@ -17,8 +17,8 @@ export async function annotateVariants(variants: Variant[]): Promise<{
   const therapies: Therapy[] = [];
   
   try {
-    // Convert variants to schema format for annotation APIs
-    const schemaVariants: SchemaVariant[] = variants.map(v => ({
+    // Convert variants to input format for annotation APIs
+    const inputVariants: VariantInput[] = variants.map(v => ({
       chrom: v.chrom || '',
       pos: v.pos || 0,
       ref: v.ref || '',
@@ -31,15 +31,15 @@ export async function annotateVariants(variants: Variant[]): Promise<{
 
     // Fetch annotations from all sources in parallel
     const [oncoKBResults, clinVarResults, dgidbResults] = await Promise.allSettled([
-      Promise.all(schemaVariants.map(v => fetchOncoKB([v]).catch(err => {
+      Promise.all(inputVariants.map(v => fetchOncoKB([v]).catch(err => {
         console.warn(`OncoKB fetch failed for ${v.gene}:`, err.message);
         return null;
       }))),
-      Promise.all(schemaVariants.map(v => fetchClinVar([v]).catch(err => {
+      Promise.all(inputVariants.map(v => fetchClinVar([v]).catch(err => {
         console.warn(`ClinVar fetch failed for ${v.gene}:`, err.message);
         return null;
       }))),
-      Promise.all(schemaVariants.map(v => fetchDGIdb([v]).catch(err => {
+      Promise.all(inputVariants.map(v => fetchDGIdb([v]).catch(err => {
         console.warn(`DGIdb fetch failed for ${v.gene}:`, err.message);
         return null;
       }))),
@@ -57,7 +57,7 @@ export async function annotateVariants(variants: Variant[]): Promise<{
         const gene = variant.gene || 'Unknown';
         
         try {
-          const annotations = await annotateOncoKBWithSonnet(data);
+          const annotations = await annotateOncoKBWithSonnet(data as unknown as VariantInput[]);
           
           // Process each annotation (it returns an array)
           for (const annotation of annotations) {
@@ -108,7 +108,7 @@ export async function annotateVariants(variants: Variant[]): Promise<{
         const gene = variant.gene || 'Unknown';
         
         try {
-          const annotations = await annotateClinVarWithSonnet(data);
+          const annotations = await annotateClinVarWithSonnet(data as unknown as VariantInput[]);
           
           // Process each annotation (it returns an array)
           for (const annotation of annotations) {
@@ -144,7 +144,7 @@ export async function annotateVariants(variants: Variant[]): Promise<{
         const gene = variant.gene || 'Unknown';
         
         try {
-          const annotations = await annotateDGIdbWithSonnet(data);
+          const annotations = await annotateDGIdbWithSonnet(data as unknown as VariantInput[]);
           
           // Process each annotation (it returns an array)
           for (const annotation of annotations) {

@@ -269,7 +269,7 @@ export default function OncoKbVariantDetails({ results }: OncoKbVariantDetailsPr
                 {result.query.geneSymbol && (
                   <div className="mt-4">
                     <a
-                      href={getOncoKbVariantLink(result)}
+                      href={getOncoKbVariantLink(result) ?? undefined}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary-600 hover:text-primary-800 flex items-center text-sm"

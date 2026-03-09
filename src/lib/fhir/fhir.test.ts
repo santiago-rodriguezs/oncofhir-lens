@@ -1,9 +1,9 @@
-import { createGenomicObservation, createDetectedIssue } from './fhir';
-import { Variant } from '@/types/fhir';
+import { createGenomicObservation, createDetectedIssue } from './resources';
+import { Variant } from '@/core/models';
 
 // Mock the fhirClient function
-jest.mock('./fhir', () => {
-  const originalModule = jest.requireActual('./fhir');
+jest.mock('./resources', () => {
+  const originalModule = jest.requireActual('./resources');
   
   // Mock client for testing
   const mockClient = {
@@ -38,17 +38,17 @@ describe('FHIR Mapping Functions', () => {
     id: 'test-variant-id',
     gene: 'EGFR',
     hgvs: 'p.L858R',
-    chromosome: '7',
-    position: 55259515,
-    reference: 'T',
-    alternate: 'G',
-    consequence: 'missense_variant',
+    chrom: '7',
+    pos: 55259515,
+    ref: 'T',
+    alt: 'G',
+    effect: 'missense_variant',
     clinvarSignificance: 'Pathogenic',
     vaf: 0.35,
     quality: 100,
     filter: 'PASS',
     evidenceLevel: 'Level 1',
-    evidenceUrls: [
+    evidenceLinks: [
       'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6933030/'
     ]
   };
@@ -70,20 +70,20 @@ describe('FHIR Mapping Functions', () => {
     const components = observation.component || [];
     
     // Find gene component
-    const geneComponent = components.find(c => 
-      c.code?.coding?.some(coding => coding.code === '48018-6')
+    const geneComponent = components.find((c: any) =>
+      c.code?.coding?.some((coding: any) => coding.code === '48018-6')
     );
     expect(geneComponent?.valueString).toBe('EGFR');
-    
+
     // Find HGVS component
-    const hgvsComponent = components.find(c => 
-      c.code?.coding?.some(coding => coding.code === '48004-6')
+    const hgvsComponent = components.find((c: any) =>
+      c.code?.coding?.some((coding: any) => coding.code === '48004-6')
     );
     expect(hgvsComponent?.valueString).toBe('p.L858R');
-    
+
     // Find VAF component
-    const vafComponent = components.find(c => 
-      c.code?.coding?.some(coding => coding.code === '81258-6')
+    const vafComponent = components.find((c: any) =>
+      c.code?.coding?.some((coding: any) => coding.code === '81258-6')
     );
     expect(vafComponent?.valueString).toBe('0.35');
   });

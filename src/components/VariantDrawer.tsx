@@ -3,7 +3,7 @@
 import { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { XMarkIcon, LinkIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
-import { Variant } from '@/types/fhir';
+import { Variant } from '@/core/models';
 
 interface VariantDrawerProps {
   variant: Variant | null;
@@ -68,7 +68,7 @@ export default function VariantDrawer({ variant, isOpen, onClose }: VariantDrawe
                         <div>
                           <h3 className="text-lg font-medium text-gray-900">{variant.gene} - {variant.hgvs}</h3>
                           <p className="mt-1 text-sm text-gray-500">
-                            {variant.chromosome}:{variant.position} {variant.reference}{'>'}{variant.alternate}
+                            {variant.chrom}:{variant.pos} {variant.ref}{'>'}{variant.alt}
                           </p>
                         </div>
                         
@@ -76,7 +76,7 @@ export default function VariantDrawer({ variant, isOpen, onClose }: VariantDrawe
                           <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                             <div className="sm:col-span-1">
                               <dt className="text-sm font-medium text-gray-500">Consecuencia</dt>
-                              <dd className="mt-1 text-sm text-gray-900">{variant.consequence}</dd>
+                              <dd className="mt-1 text-sm text-gray-900">{variant.effect || 'No disponible'}</dd>
                             </div>
                             <div className="sm:col-span-1">
                               <dt className="text-sm font-medium text-gray-500">Significancia ClinVar</dt>
@@ -107,11 +107,11 @@ export default function VariantDrawer({ variant, isOpen, onClose }: VariantDrawe
                           </dl>
                         </div>
                         
-                        {variant.evidenceUrls && variant.evidenceUrls.length > 0 && (
+                        {variant.evidenceLinks && variant.evidenceLinks.length > 0 && (
                           <div className="border-t border-gray-200 pt-4">
                             <h3 className="text-sm font-medium text-gray-500">Evidencia y Literatura</h3>
                             <ul className="mt-2 divide-y divide-gray-200">
-                              {variant.evidenceUrls.map((url, index) => (
+                              {variant.evidenceLinks.map((url, index) => (
                                 <li key={index} className="py-2">
                                   <a 
                                     href={url} 
