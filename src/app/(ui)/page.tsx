@@ -76,7 +76,7 @@ export default function Home() {
 
           <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
             <p className="text-sm text-yellow-700">
-              Esta función extrae variantes de un PDF clínico usando Claude Sonnet 4.5.
+              Esta función extrae variantes de un PDF clínico usando Claude Sonnet 4.6.
               Los mejores resultados se obtienen con informes de texto seleccionable (no escaneados).
             </p>
           </div>
@@ -144,7 +144,7 @@ export default function Home() {
 
       {/* Footer */}
       <div className="mt-8 pt-4 border-t border-gray-200 text-center text-gray-500 text-sm">
-        OncoFHIR Lens - Powered by Claude Sonnet 4.5
+        OncoFHIR Lens - Powered by Claude Sonnet 4.6
       </div>
     </div>
   );
