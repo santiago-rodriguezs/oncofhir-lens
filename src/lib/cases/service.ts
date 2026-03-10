@@ -7,6 +7,7 @@ export interface Case {
   evidence: Evidence[];
   therapies: Therapy[];
   qc: QualityControl;
+  annotationErrors?: { source: string; message: string }[];
   extractedText?: string[];
   highlights?: Array<{
     pageNumber: number;

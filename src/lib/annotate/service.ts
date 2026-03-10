@@ -1,187 +1,144 @@
-import { VariantInput } from '@/lib/schemas';
 import { Variant, Evidence, Therapy } from '@/core/models';
-import { fetchOncoKB, annotateOncoKBWithSonnet } from '@/lib/oncokb';
-import { fetchClinVar, annotateClinVarWithSonnet } from '@/lib/clinvar';
-import { fetchDGIdb, annotateDGIdbWithSonnet } from '@/lib/dgidb';
+import { VariantInput } from '@/lib/schemas';
+import { fetchOncoKB, OncoKBAnnotation } from '@/lib/oncokb';
+import { fetchClinVar, ClinVarAnnotation } from '@/lib/clinvar';
+import { fetchDGIdb, DGIdbAnnotation } from '@/lib/dgidb';
+
+/** Convert core Variant to VariantInput for API calls */
+function toInput(v: Variant): VariantInput {
+  return {
+    chrom: v.chrom || '',
+    pos: v.pos || 0,
+    ref: v.ref || '',
+    alt: v.alt || '',
+    gene: v.gene,
+    vaf: v.vaf,
+    hgvs_c: v.hgvs_c,
+    hgvs_p: v.hgvs_p,
+  };
+}
 
 /**
- * Annotate variants with evidence and therapies from multiple sources
+ * Annotate variants with evidence and therapies from multiple sources.
+ * Strategy: try real APIs only — report errors clearly, never mix AI-generated data.
  */
 export async function annotateVariants(variants: Variant[]): Promise<{
   evidence: Evidence[];
   therapies: Therapy[];
+  errors: { source: string; message: string }[];
 }> {
   console.log(`[AnnotateService] Annotating ${variants.length} variants`);
-  
+
   const evidence: Evidence[] = [];
   const therapies: Therapy[] = [];
-  
+  const errors: { source: string; message: string }[] = [];
+  const inputs = variants.map(toInput);
+
+  // --- OncoKB ---
+  let oncoKBAnnotations: OncoKBAnnotation[] = [];
   try {
-    // Convert variants to input format for annotation APIs
-    const inputVariants: VariantInput[] = variants.map(v => ({
-      chrom: v.chrom || '',
-      pos: v.pos || 0,
-      ref: v.ref || '',
-      alt: v.alt || '',
-      gene: v.gene,
-      vaf: v.vaf,
-      hgvs_c: v.hgvs_c,
-      hgvs_p: v.hgvs_p,
-    }));
-
-    // Fetch annotations from all sources in parallel
-    const [oncoKBResults, clinVarResults, dgidbResults] = await Promise.allSettled([
-      Promise.all(inputVariants.map(v => fetchOncoKB([v]).catch(err => {
-        console.warn(`OncoKB fetch failed for ${v.gene}:`, err.message);
-        return null;
-      }))),
-      Promise.all(inputVariants.map(v => fetchClinVar([v]).catch(err => {
-        console.warn(`ClinVar fetch failed for ${v.gene}:`, err.message);
-        return null;
-      }))),
-      Promise.all(inputVariants.map(v => fetchDGIdb([v]).catch(err => {
-        console.warn(`DGIdb fetch failed for ${v.gene}:`, err.message);
-        return null;
-      }))),
-    ]);
-
-    // Process OncoKB annotations
-    if (oncoKBResults.status === 'fulfilled') {
-      const oncoKBData = oncoKBResults.value.filter(r => r !== null);
-      
-      for (let i = 0; i < oncoKBData.length; i++) {
-        const data = oncoKBData[i];
-        if (!data) continue;
-        
-        const variant = variants[i];
-        const gene = variant.gene || 'Unknown';
-        
-        try {
-          const annotations = await annotateOncoKBWithSonnet(data as unknown as VariantInput[]);
-          
-          // Process each annotation (it returns an array)
-          for (const annotation of annotations) {
-            // Add evidence
-            if (annotation.oncogenicity && annotation.oncogenicity !== 'Unknown') {
-              evidence.push({
-                evidenceId: `oncokb-${gene}-${i}`,
-                source: 'OncoKB',
-                level: annotation.evidenceLevel || 'N/A',
-                description: annotation.variantSummary || annotation.geneSummary || 'No summary available',
-                tumorContext: undefined,
-                drugAssociations: annotation.therapies?.map(t => t.drug) || [],
-                citations: [],
-                timestamp: new Date().toISOString(),
-              });
-            }
-            
-            // Add therapies
-            if (annotation.therapies) {
-              for (const therapy of annotation.therapies) {
-                therapies.push({
-                  drug: therapy.drug || 'Unknown',
-                  combination: undefined,
-                  level: therapy.level || 'N/A',
-                  biomarker: `${gene} ${variant.hgvs || variant.hgvs_p || variant.hgvs_c || ''}`,
-                  tumorType: 'All Solid Tumors',
-                  approvalStatus: undefined,
-                  evidenceId: `oncokb-${gene}-${i}`,
-                });
-              }
-            }
-          }
-        } catch (err) {
-          console.warn(`Failed to annotate OncoKB data for ${gene}:`, err);
-        }
-      }
-    }
-
-    // Process ClinVar annotations
-    if (clinVarResults.status === 'fulfilled') {
-      const clinVarData = clinVarResults.value.filter(r => r !== null);
-      
-      for (let i = 0; i < clinVarData.length; i++) {
-        const data = clinVarData[i];
-        if (!data) continue;
-        
-        const variant = variants[i];
-        const gene = variant.gene || 'Unknown';
-        
-        try {
-          const annotations = await annotateClinVarWithSonnet(data as unknown as VariantInput[]);
-          
-          // Process each annotation (it returns an array)
-          for (const annotation of annotations) {
-            // Add evidence
-            if (annotation.clinicalSignificance && annotation.clinicalSignificance !== 'Unknown') {
-              evidence.push({
-                evidenceId: `clinvar-${gene}-${i}`,
-                source: 'ClinVar',
-                level: annotation.clinicalSignificance,
-                description: `ClinVar classification: ${annotation.clinicalSignificance}`,
-                tumorContext: undefined,
-                drugAssociations: [],
-                citations: [],
-                timestamp: new Date().toISOString(),
-              });
-            }
-          }
-        } catch (err) {
-          console.warn(`Failed to annotate ClinVar data for ${gene}:`, err);
-        }
-      }
-    }
-
-    // Process DGIdb annotations
-    if (dgidbResults.status === 'fulfilled') {
-      const dgidbData = dgidbResults.value.filter(r => r !== null);
-      
-      for (let i = 0; i < dgidbData.length; i++) {
-        const data = dgidbData[i];
-        if (!data) continue;
-        
-        const variant = variants[i];
-        const gene = variant.gene || 'Unknown';
-        
-        try {
-          const annotations = await annotateDGIdbWithSonnet(data as unknown as VariantInput[]);
-          
-          // Process each annotation (it returns an array)
-          for (const annotation of annotations) {
-            // Add therapies from DGIdb
-            therapies.push({
-              drug: annotation.drug || 'Unknown',
-              combination: undefined,
-              level: annotation.evidence || 'N/A',
-              biomarker: gene,
-              tumorType: 'All Solid Tumors',
-              approvalStatus: undefined,
-              evidenceId: `dgidb-${gene}-${i}`,
-            });
-            
-            // Add evidence
-            evidence.push({
-              evidenceId: `dgidb-${gene}-${i}`,
-              source: 'Other',
-              level: annotation.evidence || 'N/A',
-              description: `Drug-gene interaction: ${annotation.drug || 'Unknown'} targets ${gene}`,
-              tumorContext: undefined,
-              drugAssociations: [annotation.drug || 'Unknown'],
-              citations: [],
-              timestamp: new Date().toISOString(),
-            });
-          }
-        } catch (err) {
-          console.warn(`Failed to annotate DGIdb data for ${gene}:`, err);
-        }
-      }
-    }
-
-    console.log(`[AnnotateService] Generated ${evidence.length} evidence items and ${therapies.length} therapies`);
-    
-    return { evidence, therapies };
-  } catch (error) {
-    console.error('[AnnotateService] Error annotating variants:', error);
-    return { evidence: [], therapies: [] };
+    oncoKBAnnotations = await fetchOncoKB(inputs);
+    console.log(`[AnnotateService] OncoKB API returned ${oncoKBAnnotations.length} annotations`);
+  } catch (err: any) {
+    console.error(`[AnnotateService] OncoKB API failed: ${err.message}`);
+    errors.push({ source: 'OncoKB', message: err.message });
   }
+
+  for (let i = 0; i < oncoKBAnnotations.length; i++) {
+    const ann = oncoKBAnnotations[i];
+    const gene = ann.gene || 'Unknown';
+
+    if (ann.oncogenicity && ann.oncogenicity !== 'Unknown') {
+      evidence.push({
+        evidenceId: `oncokb-${gene}-${i}`,
+        source: 'OncoKB',
+        level: ann.evidenceLevel || 'N/A',
+        description: ann.variantSummary || ann.geneSummary || `${gene}: ${ann.oncogenicity}`,
+        tumorContext: undefined,
+        drugAssociations: ann.therapies?.map(t => t.drug) || [],
+        citations: [],
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    if (ann.therapies) {
+      for (const therapy of ann.therapies) {
+        therapies.push({
+          drug: therapy.drug || 'Unknown',
+          combination: undefined,
+          level: therapy.level || 'N/A',
+          biomarker: `${gene} ${variants[i]?.hgvs || variants[i]?.hgvs_p || variants[i]?.hgvs_c || ''}`.trim(),
+          tumorType: 'All Solid Tumors',
+          approvalStatus: undefined,
+          evidenceId: `oncokb-${gene}-${i}`,
+        });
+      }
+    }
+  }
+
+  // --- ClinVar ---
+  let clinVarAnnotations: ClinVarAnnotation[] = [];
+  try {
+    clinVarAnnotations = await fetchClinVar(inputs);
+    console.log(`[AnnotateService] ClinVar API returned ${clinVarAnnotations.length} annotations`);
+  } catch (err: any) {
+    console.error(`[AnnotateService] ClinVar API failed: ${err.message}`);
+    errors.push({ source: 'ClinVar', message: err.message });
+  }
+
+  for (let i = 0; i < clinVarAnnotations.length; i++) {
+    const ann = clinVarAnnotations[i];
+    const gene = ann.gene || 'Unknown';
+
+    if (ann.clinicalSignificance && ann.clinicalSignificance !== 'Unknown') {
+      evidence.push({
+        evidenceId: `clinvar-${gene}-${i}`,
+        source: 'ClinVar',
+        level: ann.clinicalSignificance,
+        description: `ClinVar: ${ann.clinicalSignificance}`,
+        tumorContext: undefined,
+        drugAssociations: [],
+        citations: [],
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }
+
+  // --- DGIdb ---
+  let dgidbAnnotations: DGIdbAnnotation[] = [];
+  try {
+    dgidbAnnotations = await fetchDGIdb(inputs);
+    console.log(`[AnnotateService] DGIdb API returned ${dgidbAnnotations.length} annotations`);
+  } catch (err: any) {
+    console.error(`[AnnotateService] DGIdb API failed: ${err.message}`);
+    errors.push({ source: 'DGIdb', message: err.message });
+  }
+
+  for (const ann of dgidbAnnotations) {
+    const gene = ann.gene || 'Unknown';
+
+    therapies.push({
+      drug: ann.drug || 'Unknown',
+      combination: undefined,
+      level: ann.evidence || 'N/A',
+      biomarker: gene,
+      tumorType: 'All Solid Tumors',
+      approvalStatus: undefined,
+      evidenceId: `dgidb-${gene}`,
+    });
+
+    evidence.push({
+      evidenceId: `dgidb-${gene}-${ann.drug}`,
+      source: 'Other',
+      level: ann.evidence || 'N/A',
+      description: `Interacción droga-gen: ${ann.drug || 'Unknown'} → ${gene}`,
+      tumorContext: undefined,
+      drugAssociations: [ann.drug || 'Unknown'],
+      citations: [],
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  console.log(`[AnnotateService] Total: ${evidence.length} evidence items, ${therapies.length} therapies, ${errors.length} errors`);
+  return { evidence, therapies, errors };
 }

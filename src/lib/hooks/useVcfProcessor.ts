@@ -32,30 +32,14 @@ export function useVcfProcessor() {
   };
 
   const loadRichExample = async () => {
-    setIsProcessing(true);
     setError(null);
-
     try {
       const response = await fetch('/examples/cancer_variants_rich.vcf');
       if (!response.ok) throw new Error(`Error: ${response.status}`);
-
       const vcfContent = await response.text();
       setVcfText(vcfContent);
-
-      const processResponse = await fetch('/api/vcf/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vcf: vcfContent }),
-      });
-
-      if (!processResponse.ok) throw new Error(`Error: ${processResponse.status}`);
-
-      const data = await processResponse.json();
-      router.push(`/visualizer/${data.caseId}`);
     } catch (err) {
-      setError(`Error loading example: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
-      setIsProcessing(false);
+      setError(`Error al cargar ejemplo: ${err instanceof Error ? err.message : 'Error desconocido'}`);
     }
   };
 

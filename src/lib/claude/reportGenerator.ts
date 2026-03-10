@@ -3,7 +3,7 @@ import { sonnetJson } from '@/lib/sonnet';
 import { GenomicReportSchema, GenomicReport } from './schemas';
 import { ClinicalInterpretation } from './schemas';
 
-const MODEL = 'claude-sonnet-4-6-20250828';
+import { getClaudeModel } from '@/lib/model';
 
 const SYSTEM_PROMPT = `You are a clinical genomics reporting assistant generating structured molecular pathology reports.
 
@@ -41,6 +41,7 @@ export async function generateGenomicReport(params: {
     sampleType?: string;
     reportSource?: string;
   };
+  model?: string;
 }): Promise<GenomicReport> {
   const { variants, evidence, therapies, interpretations, context } = params;
 
@@ -121,7 +122,7 @@ ${
 Generate a comprehensive molecular pathology report following CAP/AMP guidelines.`;
 
   return sonnetJson<GenomicReport>(
-    MODEL,
+    getClaudeModel(params.model),
     SYSTEM_PROMPT,
     prompt,
     'GenomicReport',

@@ -66,7 +66,7 @@ const columns: ColumnDef<Variant>[] = [
   },
   {
     accessorKey: 'effect',
-    header: 'Effect',
+    header: 'Efecto',
     cell: ({ row }) => {
       const effect = row.getValue('effect') as string | undefined;
       return effect || '-';
@@ -82,7 +82,7 @@ const columns: ColumnDef<Variant>[] = [
   },
   {
     accessorKey: 'depth',
-    header: 'Depth',
+    header: 'Profundidad',
     cell: ({ row }) => {
       const depth = row.getValue('depth') as number | undefined;
       return depth || '-';
@@ -90,7 +90,7 @@ const columns: ColumnDef<Variant>[] = [
   },
   {
     accessorKey: 'zygosity',
-    header: 'Zygosity',
+    header: 'Cigosidad',
     cell: ({ row }) => {
       const zygosity = row.getValue('zygosity') as string | undefined;
       return zygosity || '-';
@@ -134,7 +134,7 @@ const columns: ColumnDef<Variant>[] = [
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">Abrir menú</span>
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -142,7 +142,7 @@ const columns: ColumnDef<Variant>[] = [
             <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(variant.hgvs || '')}
             >
-              Copy HGVS
+              Copiar HGVS
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
@@ -150,7 +150,7 @@ const columns: ColumnDef<Variant>[] = [
                 console.log('Show evidence for', variant.gene);
               }}
             >
-              View Evidence
+              Ver evidencia
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -258,7 +258,7 @@ export function VariantsPanel({
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No variants found.
+                  No se encontraron variantes.
                 </TableCell>
               </TableRow>
             )}
@@ -272,7 +272,7 @@ export function VariantsPanel({
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
         >
-          Previous
+          Anterior
         </Button>
         <Button
           variant="outline"
@@ -280,7 +280,7 @@ export function VariantsPanel({
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
         >
-          Next
+          Siguiente
         </Button>
       </div>
     </div>

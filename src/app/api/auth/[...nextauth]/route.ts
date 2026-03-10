@@ -4,6 +4,8 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 
 const ALLOWED_EMAILS = [
   'santirodriguezsalinas@gmail.com',
+  'mbernal@uma-health.com',
+  'fmurzone@uma-health.com',
 ];
 
 // Demo/test credentials provider — only active when DEMO_SECRET is configured

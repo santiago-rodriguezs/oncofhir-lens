@@ -65,7 +65,7 @@ export function TherapiesPanel({
           <div className="relative">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search drugs..."
+              placeholder="Buscar drogas..."
               className="pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -76,10 +76,10 @@ export function TherapiesPanel({
             onValueChange={(value) => setBiomarkerFilter(value === 'all' ? null : value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Filter by biomarker" />
+              <SelectValue placeholder="Filtrar por biomarcador" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All biomarkers</SelectItem>
+              <SelectItem value="all">Todos los biomarcadores</SelectItem>
               {biomarkers.map((biomarker) => (
                 <SelectItem key={biomarker} value={biomarker}>
                   {biomarker}
@@ -92,10 +92,10 @@ export function TherapiesPanel({
             onValueChange={(value) => setTumorTypeFilter(value === 'all' ? null : value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Filter by tumor type" />
+              <SelectValue placeholder="Filtrar por tipo de tumor" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All tumor types</SelectItem>
+              <SelectItem value="all">Todos los tipos de tumor</SelectItem>
               {tumorTypes.map((tumorType) => (
                 <SelectItem key={tumorType} value={tumorType}>
                   {tumorType}
@@ -118,17 +118,17 @@ export function TherapiesPanel({
                   <Badge variant="outline">{tumorType}</Badge>
                 </div>
                 <Badge>
-                  {groupTherapies.length} {groupTherapies.length === 1 ? 'therapy' : 'therapies'}
+                  {groupTherapies.length} {groupTherapies.length === 1 ? 'terapia' : 'terapias'}
                 </Badge>
               </div>
 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Drug</TableHead>
-                    <TableHead>Level</TableHead>
-                    <TableHead>Approval Status</TableHead>
-                    <TableHead>Evidence</TableHead>
+                    <TableHead>Droga</TableHead>
+                    <TableHead>Nivel</TableHead>
+                    <TableHead>Estado de aprobación</TableHead>
+                    <TableHead>Evidencia</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

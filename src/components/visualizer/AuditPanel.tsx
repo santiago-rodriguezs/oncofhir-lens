@@ -45,10 +45,10 @@ export function AuditPanel({ entries, onAddNote }: AuditPanelProps) {
     <div className="space-y-6">
       {/* Add Note */}
       <Card className="p-4">
-        <h3 className="text-lg font-semibold mb-4">Add Note</h3>
+        <h3 className="text-lg font-semibold mb-4">Agregar Nota</h3>
         <div className="space-y-4">
           <Textarea
-            placeholder="Enter your note here..."
+            placeholder="Escriba su nota aquí..."
             value={newNote}
             onChange={(e) => setNewNote(e.target.value)}
             className="min-h-[100px]"
@@ -59,11 +59,11 @@ export function AuditPanel({ entries, onAddNote }: AuditPanelProps) {
             className="w-full"
           >
             {isSaving ? (
-              'Saving...'
+              'Guardando...'
             ) : (
               <>
                 <Plus className="w-4 h-4 mr-2" />
-                Add Note
+                Agregar Nota
               </>
             )}
           </Button>
@@ -72,12 +72,12 @@ export function AuditPanel({ entries, onAddNote }: AuditPanelProps) {
 
       {/* Timeline */}
       <Card className="p-4">
-        <h3 className="text-lg font-semibold mb-4">Activity Timeline</h3>
+        <h3 className="text-lg font-semibold mb-4">Línea de Actividad</h3>
         <ScrollArea className="h-[calc(100vh-400px)]">
           <div className="space-y-4 pr-4">
             {entries.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
-                No activity recorded yet
+                Sin actividad registrada aún
               </div>
             ) : (
               entries.map((entry) => (
@@ -108,7 +108,7 @@ export function AuditPanel({ entries, onAddNote }: AuditPanelProps) {
                           {entry.type.charAt(0).toUpperCase() + entry.type.slice(1)}
                         </Badge>
                         <span className="text-sm text-muted-foreground">
-                          by {entry.user}
+                          por {entry.user}
                         </span>
                       </div>
                       <div className="text-xs text-muted-foreground">
@@ -126,7 +126,7 @@ export function AuditPanel({ entries, onAddNote }: AuditPanelProps) {
                     <div className="mt-2 pt-2 border-t text-sm">
                       {entry.metadata.action && (
                         <div className="text-muted-foreground mb-1">
-                          Action: {entry.metadata.action}
+                          Acción: {entry.metadata.action}
                         </div>
                       )}
                       {entry.metadata.previous && (

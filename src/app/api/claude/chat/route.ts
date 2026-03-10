@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Claude Chat] Question: "${question.slice(0, 80)}..."`);
 
+    const model = request.headers.get('x-claude-model') || undefined;
     const response = await askTumorBoard({
       question,
       history,
@@ -30,6 +31,7 @@ export async function POST(request: NextRequest) {
       evidence,
       therapies,
       tumorType,
+      model,
     });
 
     return NextResponse.json({ response }, { status: 200 });

@@ -2,7 +2,7 @@ import { Variant, Evidence, Therapy } from '@/core/models';
 import { getAnthropic } from '@/lib/sonnet';
 import { TumorBoardMessage } from './schemas';
 
-const MODEL = 'claude-sonnet-4-6-20250828';
+import { getClaudeModel } from '@/lib/model';
 
 const SYSTEM_PROMPT_TEMPLATE = `You are a molecular tumor board assistant for an oncology genomics platform.
 
@@ -86,6 +86,7 @@ export async function askTumorBoard(params: {
   evidence?: Evidence[];
   therapies?: Therapy[];
   tumorType?: string;
+  model?: string;
 }): Promise<string> {
   const { question, history, variants, evidence, therapies, tumorType } =
     params;
@@ -101,7 +102,7 @@ export async function askTumorBoard(params: {
   ];
 
   const response = await anthropic.messages.create({
-    model: MODEL,
+    model: getClaudeModel(params.model),
     system: buildSystemPrompt({ variants, evidence, therapies, tumorType }),
     messages,
     temperature: 0.3,

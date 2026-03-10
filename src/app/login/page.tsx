@@ -3,6 +3,7 @@
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { GeneticLoader } from '@/components/GeneticLoader';
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
@@ -15,15 +16,11 @@ export default function LoginPage() {
   }, [session, router]);
 
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    );
+    return <GeneticLoader message="OncoFHIR Lens" submessage="Authenticating..." />;
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="max-w-md w-full space-y-8 p-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">OncoFHIR Lens</h1>

@@ -1,4 +1,5 @@
 import { sonnetJson } from '@/lib/sonnet';
+import { getClaudeModel } from '@/lib/model';
 import { Annotation, AnnotationSchema, FhirBundle, FhirBundleSchema } from '@/lib/schemas';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -83,7 +84,7 @@ export async function POST(request: NextRequest) {
     
     // Call Sonnet to generate FHIR bundle
     const bundle = await sonnetJson<FhirBundle>(
-      "claude-sonnet-4-6-20250828",
+      getClaudeModel(),
       system,
       userPrompt,
       'FhirBundle',

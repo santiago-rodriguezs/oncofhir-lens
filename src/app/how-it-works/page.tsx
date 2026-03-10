@@ -9,7 +9,7 @@ export default function HowItWorksPage() {
     <Tabs defaultValue="pitch" className="w-full">
       <TabsList className="mb-4">
         <TabsTrigger value="pitch">Pitch</TabsTrigger>
-        <TabsTrigger value="how-it-works">Documentación Técnica</TabsTrigger>
+        <TabsTrigger value="how-it-works">Documentación técnica</TabsTrigger>
       </TabsList>
       <TabsContent value="pitch">
         <PitchPanel />

@@ -94,25 +94,10 @@ module.exports = {
   					height: '0'
   				}
   			},
-  			'float': {
-  				'0%, 100%': {
-  					transform: 'translateY(0) translateX(0)'
-  				},
-  				'25%': {
-  					transform: 'translateY(-20px) translateX(10px)'
-  				},
-  				'50%': {
-  					transform: 'translateY(-10px) translateX(-10px)'
-  				},
-  				'75%': {
-  					transform: 'translateY(-30px) translateX(5px)'
-  				}
-  			}
-  		},
+  			},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out',
-  			'float': 'float 5s ease-in-out infinite'
+  			'accordion-up': 'accordion-up 0.2s ease-out'
   		}
   	}
   },

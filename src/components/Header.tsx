@@ -2,10 +2,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
+import { useModelStore } from '@/lib/store/model';
 
 export default function Header() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { model, setModel } = useModelStore();
 
   // Don't render header on login page
   if (pathname === '/login') return null;
@@ -49,11 +51,34 @@ export default function Header() {
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                How It Works
+                Cómo Funciona
               </Link>
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            {/* Model selector */}
+            <div className="flex items-center gap-1.5 rounded-full bg-gray-100 p-0.5">
+              <button
+                onClick={() => setModel('sonnet')}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  model === 'sonnet'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Sonnet
+              </button>
+              <button
+                onClick={() => setModel('opus')}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  model === 'opus'
+                    ? 'bg-violet-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Opus
+              </button>
+            </div>
             {session?.user && (
               <>
                 {session.user.image && (

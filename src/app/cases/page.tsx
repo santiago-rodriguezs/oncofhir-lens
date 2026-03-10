@@ -63,7 +63,7 @@ export default function CasesPage() {
 
   return (
     <div className="container py-8">
-      <h1 className="text-2xl font-bold mb-6">Past Cases</h1>
+      <h1 className="text-2xl font-bold mb-6">Casos Anteriores</h1>
       <CaseList cases={cases} />
     </div>
   );

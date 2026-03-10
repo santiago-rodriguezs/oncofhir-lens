@@ -2,8 +2,7 @@ import { Variant } from '@/core/models';
 import { sonnetJson } from '@/lib/sonnet';
 import { ClinicalInterpretationSchema, ClinicalInterpretation } from './schemas';
 import { z } from 'zod';
-
-const MODEL = 'claude-sonnet-4-6-20250828';
+import { getClaudeModel } from '@/lib/model';
 
 const SYSTEM_PROMPT = `You are a molecular tumor board assistant specializing in somatic variant interpretation.
 
@@ -34,7 +33,8 @@ Respond ONLY with valid JSON, no markdown formatting.`;
  */
 export async function interpretVariant(
   variant: Variant,
-  context?: { tumorType?: string; stage?: string; priorTherapies?: string[] }
+  context?: { tumorType?: string; stage?: string; priorTherapies?: string[] },
+  model?: string
 ): Promise<ClinicalInterpretation> {
   const contextSection = context
     ? `\nClinical context:
@@ -74,7 +74,7 @@ ${contextSection}
 Provide AMP/ASCO/CAP tier classification, actionability assessment, therapeutic implications with evidence levels, and relevant clinical trials.`;
 
   return sonnetJson<ClinicalInterpretation>(
-    MODEL,
+    getClaudeModel(model),
     SYSTEM_PROMPT,
     prompt,
     'ClinicalInterpretation',
@@ -87,10 +87,11 @@ Provide AMP/ASCO/CAP tier classification, actionability assessment, therapeutic 
  */
 export async function interpretVariants(
   variants: Variant[],
-  context?: { tumorType?: string; stage?: string; priorTherapies?: string[] }
+  context?: { tumorType?: string; stage?: string; priorTherapies?: string[] },
+  model?: string
 ): Promise<ClinicalInterpretation[]> {
   const results = await Promise.allSettled(
-    variants.map((v) => interpretVariant(v, context))
+    variants.map((v) => interpretVariant(v, context, model))
   );
 
   return results

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useModelStore } from '@/lib/store/model';
 import {
   Table,
   TableBody,
@@ -45,6 +46,7 @@ export function ClinicalInsightsPanel({
   therapies,
   tumorType,
 }: ClinicalInsightsPanelProps) {
+  const { model } = useModelStore();
   const [interpretations, setInterpretations] = useState<ClinicalInterpretation[]>([]);
   const [report, setReport] = useState<GenomicReport | null>(null);
   const [loadingInterpret, setLoadingInterpret] = useState(false);
@@ -58,7 +60,7 @@ export function ClinicalInsightsPanel({
     try {
       const res = await fetch('/api/claude/interpret', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
         body: JSON.stringify({
           variants,
           context: tumorType ? { tumorType } : undefined,
@@ -68,7 +70,7 @@ export function ClinicalInsightsPanel({
       const data = await res.json();
       setInterpretations(data.interpretations);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error interpreting variants');
+      setError(err instanceof Error ? err.message : 'Error al interpretar variantes');
     } finally {
       setLoadingInterpret(false);
     }
@@ -80,7 +82,7 @@ export function ClinicalInsightsPanel({
     try {
       const res = await fetch('/api/claude/report', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
         body: JSON.stringify({
           variants,
           evidence,
@@ -96,7 +98,7 @@ export function ClinicalInsightsPanel({
       const data = await res.json();
       setReport(data.report);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error generating report');
+      setError(err instanceof Error ? err.message : 'Error al generar reporte');
     } finally {
       setLoadingReport(false);
     }
@@ -109,9 +111,9 @@ export function ClinicalInsightsPanel({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-600" />
-            <h3 className="text-lg font-semibold">Claude Clinical Insights</h3>
+            <h3 className="text-lg font-semibold">Claude Insights Clínicos</h3>
             <Badge variant="outline" className="text-xs">
-              Powered by Claude Sonnet 4.6
+              Powered by Claude Sonnet / Opus 4.6
             </Badge>
           </div>
           <div className="flex gap-2">
@@ -120,7 +122,7 @@ export function ClinicalInsightsPanel({
               disabled={loadingInterpret || variants.length === 0}
               variant="default"
             >
-              {loadingInterpret ? 'Interpreting...' : 'Interpret Variants'}
+              {loadingInterpret ? 'Interpretando...' : 'Interpretar Variantes'}
             </Button>
             <Button
               onClick={handleGenerateReport}
@@ -128,7 +130,7 @@ export function ClinicalInsightsPanel({
               variant="outline"
             >
               <FileText className="h-4 w-4 mr-2" />
-              {loadingReport ? 'Generating...' : 'Generate Report'}
+              {loadingReport ? 'Generando...' : 'Generar Reporte'}
             </Button>
           </div>
         </div>
@@ -156,17 +158,17 @@ export function ClinicalInsightsPanel({
       {interpretations.length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">
-            Variant Interpretations (AMP/ASCO/CAP)
+            Interpretaciones de Variantes (AMP/ASCO/CAP)
           </h3>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Gene</TableHead>
-                <TableHead>Variant</TableHead>
+                <TableHead>Gen</TableHead>
+                <TableHead>Variante</TableHead>
                 <TableHead>Tier</TableHead>
-                <TableHead>Classification</TableHead>
-                <TableHead>Actionability</TableHead>
-                <TableHead>Confidence</TableHead>
+                <TableHead>Clasificación</TableHead>
+                <TableHead>Accionabilidad</TableHead>
+                <TableHead>Confianza</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -221,7 +223,7 @@ export function ClinicalInsightsPanel({
                           {/* Tier rationale */}
                           <div>
                             <h4 className="text-sm font-semibold mb-1">
-                              Tier Rationale
+                              Justificación del Tier
                             </h4>
                             <p className="text-sm text-muted-foreground">
                               {interp.tierRationale}
@@ -231,7 +233,7 @@ export function ClinicalInsightsPanel({
                           {/* Reasoning */}
                           <div>
                             <h4 className="text-sm font-semibold mb-1">
-                              Clinical Reasoning
+                              Razonamiento Clínico
                             </h4>
                             <p className="text-sm text-muted-foreground">
                               {interp.reasoning}
@@ -242,7 +244,7 @@ export function ClinicalInsightsPanel({
                           {interp.therapeuticImplications.length > 0 && (
                             <div>
                               <h4 className="text-sm font-semibold mb-2">
-                                Therapeutic Implications
+                                Implicancias Terapéuticas
                               </h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                                 {interp.therapeuticImplications.map(
@@ -283,7 +285,7 @@ export function ClinicalInsightsPanel({
                             interp.clinicalTrials.length > 0 && (
                               <div>
                                 <h4 className="text-sm font-semibold mb-1">
-                                  Relevant Clinical Trials
+                                  Ensayos Clínicos Relevantes
                                 </h4>
                                 <ul className="list-disc list-inside text-sm text-muted-foreground">
                                   {interp.clinicalTrials.map((ct, ctIdx) => (
@@ -300,7 +302,7 @@ export function ClinicalInsightsPanel({
                           {interp.prognosticImplications && (
                             <div>
                               <h4 className="text-sm font-semibold mb-1">
-                                Prognostic Implications
+                                Implicancias Pronósticas
                               </h4>
                               <p className="text-sm text-muted-foreground">
                                 {interp.prognosticImplications}
@@ -312,7 +314,7 @@ export function ClinicalInsightsPanel({
                           {interp.sources.length > 0 && (
                             <div>
                               <h4 className="text-sm font-semibold mb-1">
-                                Sources
+                                Fuentes
                               </h4>
                               <ul className="list-disc list-inside text-sm text-muted-foreground">
                                 {interp.sources.map((s, sIdx) => (
@@ -337,16 +339,16 @@ export function ClinicalInsightsPanel({
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">
-              Molecular Pathology Report
+              Reporte de Patología Molecular
             </h3>
-            <Badge variant="outline">AI-Generated</Badge>
+            <Badge variant="outline">Generado por IA</Badge>
           </div>
           <ScrollArea className="max-h-[600px]">
             <div className="space-y-6 pr-4">
               {/* Executive Summary */}
               <section>
                 <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                  Executive Summary
+                  Resumen Ejecutivo
                 </h4>
                 <p className="text-sm leading-relaxed">
                   {report.executiveSummary}
@@ -356,16 +358,16 @@ export function ClinicalInsightsPanel({
               {/* Variant Classifications */}
               <section>
                 <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                  Variant Classifications
+                  Clasificación de Variantes
                 </h4>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Gene</TableHead>
-                      <TableHead>Variant</TableHead>
+                      <TableHead>Gen</TableHead>
+                      <TableHead>Variante</TableHead>
                       <TableHead>Tier</TableHead>
-                      <TableHead>Classification</TableHead>
-                      <TableHead>Significance</TableHead>
+                      <TableHead>Clasificación</TableHead>
+                      <TableHead>Significancia</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -399,7 +401,7 @@ export function ClinicalInsightsPanel({
               {report.therapeuticImplications.fdaApproved.length > 0 && (
                 <section>
                   <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                    FDA-Approved Therapies
+                    Terapias Aprobadas por FDA
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {report.therapeuticImplications.fdaApproved.map(
@@ -428,7 +430,7 @@ export function ClinicalInsightsPanel({
               {report.therapeuticImplications.nccnRecommended.length > 0 && (
                 <section>
                   <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                    NCCN-Recommended Therapies
+                    Terapias Recomendadas por NCCN
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {report.therapeuticImplications.nccnRecommended.map(
@@ -457,7 +459,7 @@ export function ClinicalInsightsPanel({
               {report.therapeuticImplications.clinicalTrials.length > 0 && (
                 <section>
                   <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                    Clinical Trial Opportunities
+                    Oportunidades de Ensayos Clínicos
                   </h4>
                   <ul className="space-y-2">
                     {report.therapeuticImplications.clinicalTrials.map(
@@ -468,7 +470,7 @@ export function ClinicalInsightsPanel({
                           </span>
                           <span className="text-muted-foreground">
                             {' '}
-                            — Biomarker: {ct.biomarker}
+                            — Biomarcador: {ct.biomarker}
                             {ct.phase && ` (${ct.phase})`}
                           </span>
                         </li>
@@ -482,7 +484,7 @@ export function ClinicalInsightsPanel({
               {report.monitoringRecommendations.length > 0 && (
                 <section>
                   <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                    Monitoring Recommendations
+                    Recomendaciones de Monitoreo
                   </h4>
                   <ul className="list-disc list-inside text-sm space-y-1">
                     {report.monitoringRecommendations.map((rec, idx) => (
@@ -495,7 +497,7 @@ export function ClinicalInsightsPanel({
               {/* Limitations */}
               <section>
                 <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                  Limitations
+                  Limitaciones
                 </h4>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                   {report.limitations.map((lim, idx) => (
@@ -507,7 +509,7 @@ export function ClinicalInsightsPanel({
               {/* Methodology */}
               <section>
                 <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                  Methodology
+                  Metodología
                 </h4>
                 <p className="text-sm text-muted-foreground">
                   {report.methodology}
@@ -517,10 +519,10 @@ export function ClinicalInsightsPanel({
               {/* Disclaimer */}
               <Card className="p-3 bg-amber-50 border-amber-200">
                 <p className="text-xs text-amber-800">
-                  This report was generated by an AI assistant (Claude Sonnet
-                  4.6) and is intended for research and educational purposes
-                  only. All findings should be reviewed and validated by a
-                  qualified molecular pathologist before clinical use.
+                  Este reporte fue generado por un asistente de IA (Claude Sonnet
+                  4.6) y está destinado únicamente a fines de investigación y
+                  educación. Todos los hallazgos deben ser revisados y validados
+                  por un patólogo molecular calificado antes de su uso clínico.
                 </p>
               </Card>
             </div>
@@ -536,11 +538,11 @@ export function ClinicalInsightsPanel({
           <Card className="p-8 text-center">
             <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium mb-2">
-              Clinical Variant Interpretation
+              Interpretación Clínica de Variantes
             </h3>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Use Claude to interpret variants following AMP/ASCO/CAP guidelines
-              and generate structured molecular pathology reports.
+              Usá Claude para interpretar variantes siguiendo las guías AMP/ASCO/CAP
+              y generar reportes estructurados de patología molecular.
             </p>
           </Card>
         )}

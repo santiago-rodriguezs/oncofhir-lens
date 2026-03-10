@@ -33,7 +33,7 @@ export function ReportViewerPanel({
       {/* PDF Viewer */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Original Report</h3>
+          <h3 className="text-lg font-semibold">Reporte Original</h3>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -68,19 +68,19 @@ export function ReportViewerPanel({
             </div>
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              No PDF report available
+              No hay reporte PDF disponible
             </div>
           )}
         </ScrollArea>
       </Card>
 
-      {/* Extracted Content */}
+      {/* Contenido Extraído */}
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold">Extracted Content</h3>
+          <h3 className="text-lg font-semibold">Contenido Extraído</h3>
           {selectedVariant && (
             <Badge variant="secondary">
-              Showing highlights for {selectedVariant.gene} {selectedVariant.hgvs}
+              Mostrando coincidencias para {selectedVariant.gene} {selectedVariant.hgvs}
             </Badge>
           )}
         </div>
@@ -89,7 +89,7 @@ export function ReportViewerPanel({
             {extractedText.map((text, pageIndex) => (
               <div key={pageIndex} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Badge variant="outline">Page {pageIndex + 1}</Badge>
+                  <Badge variant="outline">Página {pageIndex + 1}</Badge>
                   <Button
                     variant="ghost"
                     size="icon"

@@ -6,17 +6,19 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
+import { Search, AlertTriangle } from "lucide-react";
 
 interface AnnotationsPanelProps {
   selectedVariant?: Variant;
   evidence: Evidence[];
+  annotationErrors?: { source: string; message: string }[];
   onEvidenceSelect: (evidence: Evidence) => void;
 }
 
 export function AnnotationsPanel({
   selectedVariant,
   evidence,
+  annotationErrors,
   onEvidenceSelect,
 }: AnnotationsPanelProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,12 +35,35 @@ export function AnnotationsPanel({
 
   return (
     <div className="space-y-4">
+      {/* Annotation source errors */}
+      {annotationErrors && annotationErrors.length > 0 && (
+        <Card className="p-4 border-l-4 border-red-500 bg-red-50 dark:bg-red-950/20">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h4 className="font-semibold text-red-800 dark:text-red-300 text-sm">
+                Error al anotar con fuentes externas
+              </h4>
+              {annotationErrors.map((err, idx) => (
+                <div key={idx} className="flex items-center gap-2 text-sm">
+                  <Badge variant="destructive" className="text-xs">{err.source}</Badge>
+                  <span className="text-red-700 dark:text-red-400">{err.message}</span>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground mt-2">
+                Las anotaciones mostradas provienen únicamente de las fuentes que respondieron correctamente.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Search and filters */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search evidence..."
+            placeholder="Buscar evidencia..."
             className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -51,7 +76,7 @@ export function AnnotationsPanel({
             setSourceFilter(null);
           }}
         >
-          Clear Filters
+          Limpiar filtros
         </Button>
       </div>
 
@@ -59,7 +84,7 @@ export function AnnotationsPanel({
       <Tabs defaultValue="all" className="space-y-4">
         <TabsList>
           <TabsTrigger value="all" onClick={() => setSourceFilter(null)}>
-            All Sources
+            Todas las fuentes
           </TabsTrigger>
           {sources.map((source) => (
             <TabsTrigger
@@ -77,7 +102,7 @@ export function AnnotationsPanel({
           <div className="space-y-4 pr-4">
             {filteredEvidence.length === 0 ? (
               <Card className="p-6 text-center text-muted-foreground">
-                No evidence found matching the current filters.
+                No se encontró evidencia con los filtros actuales.
               </Card>
             ) : (
               filteredEvidence.map((item, index) => (
@@ -89,9 +114,14 @@ export function AnnotationsPanel({
                   <div className="flex items-start justify-between mb-4">
                     <div className="space-y-1">
                       <Badge>{item.source}</Badge>
-                      {item.level && (
+                      {item.level && item.level !== 'Unknown' && item.level !== 'N/A' && (
                         <Badge variant="outline" className="ml-2">
-                          Level {item.level}
+                          Nivel {item.level}
+                        </Badge>
+                      )}
+                      {(item.level === 'Unknown' || item.level === 'N/A') && (
+                        <Badge variant="outline" className="ml-2 text-muted-foreground">
+                          Sin nivel terapéutico
                         </Badge>
                       )}
                     </div>
@@ -103,7 +133,7 @@ export function AnnotationsPanel({
                   {item.drugAssociations.length > 0 && (
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium text-muted-foreground">
-                        Associated Drugs
+                        Fármacos asociados
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         {item.drugAssociations.map((drug, drugIndex) => (
@@ -117,7 +147,7 @@ export function AnnotationsPanel({
                   {item.citations.length > 0 && (
                     <div className="mt-4 pt-4 border-t">
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        Citations
+                        Citas
                       </h4>
                       <ul className="text-sm space-y-1">
                         {item.citations.map((citation, citationIndex) => (

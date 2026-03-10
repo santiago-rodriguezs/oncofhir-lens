@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Variant, Evidence, Therapy } from '@/core/models';
 import type { TumorBoardMessage } from '@/lib/claude';
 import { MessageCircle, Send, Trash2 } from 'lucide-react';
+import { useModelStore } from '@/lib/store/model';
 
 interface TumorBoardChatProps {
   variants: Variant[];
@@ -18,11 +19,11 @@ interface TumorBoardChatProps {
 }
 
 const SUGGESTED_QUESTIONS = [
-  'What are the most actionable variants in this case?',
-  'Are there any relevant clinical trials for this molecular profile?',
-  'What resistance mechanisms should we monitor for?',
-  'Can you summarize the therapeutic implications for tumor board discussion?',
-  'Are there any drug-drug interactions to consider with the suggested therapies?',
+  '¿Cuáles son las variantes más accionables en este caso?',
+  '¿Hay ensayos clínicos relevantes para este perfil molecular?',
+  '¿Qué mecanismos de resistencia deberíamos monitorear?',
+  '¿Podés resumir las implicancias terapéuticas para la discusión del tumor board?',
+  '¿Hay interacciones farmacológicas a considerar con las terapias sugeridas?',
 ];
 
 export function TumorBoardChat({
@@ -31,6 +32,7 @@ export function TumorBoardChat({
   therapies,
   tumorType,
 }: TumorBoardChatProps) {
+  const { model } = useModelStore();
   const [messages, setMessages] = useState<TumorBoardMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,7 +60,7 @@ export function TumorBoardChat({
     try {
       const res = await fetch('/api/claude/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
         body: JSON.stringify({
           question: text,
           history: messages,
@@ -78,7 +80,7 @@ export function TumorBoardChat({
       ]);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : 'Error communicating with assistant'
+        err instanceof Error ? err.message : 'Error al comunicarse con el asistente'
       );
     } finally {
       setLoading(false);
@@ -98,7 +100,7 @@ export function TumorBoardChat({
       <div className="flex items-center justify-between p-4 border-b">
         <div className="flex items-center gap-2">
           <MessageCircle className="h-5 w-5 text-purple-600" />
-          <h3 className="font-semibold">Tumor Board Assistant</h3>
+          <h3 className="font-semibold">Asistente de Tumor Board</h3>
           <Badge variant="outline" className="text-xs">
             Claude Sonnet 4.6
           </Badge>
@@ -113,7 +115,7 @@ export function TumorBoardChat({
             }}
           >
             <Trash2 className="h-4 w-4 mr-1" />
-            Clear
+            Limpiar
           </Button>
         )}
       </div>
@@ -123,14 +125,14 @@ export function TumorBoardChat({
         {messages.length === 0 ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground text-center">
-              Ask questions about the patient&apos;s genomic profile.
-              The assistant has context of all {variants.length} variants,{' '}
-              {evidence.length} evidence items, and {therapies.length} therapy
-              suggestions.
+              Hacé preguntas sobre el perfil genómico del paciente.
+              El asistente tiene contexto de las {variants.length} variantes,{' '}
+              {evidence.length} ítems de evidencia y {therapies.length} sugerencias
+              terapéuticas.
             </p>
             <div className="space-y-2">
               <p className="text-xs font-medium text-muted-foreground">
-                Suggested questions:
+                Preguntas sugeridas:
               </p>
               {SUGGESTED_QUESTIONS.map((q, idx) => (
                 <Button
@@ -169,7 +171,7 @@ export function TumorBoardChat({
               <div className="flex justify-start">
                 <div className="bg-muted rounded-lg px-4 py-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <div className="animate-pulse">Thinking...</div>
+                    <div className="animate-pulse">Pensando...</div>
                   </div>
                 </div>
               </div>
@@ -192,7 +194,7 @@ export function TumorBoardChat({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask about variants, therapies, clinical trials..."
+            placeholder="Preguntá sobre variantes, terapias, ensayos clínicos..."
             className="min-h-[40px] max-h-[120px] resize-none"
             rows={1}
           />

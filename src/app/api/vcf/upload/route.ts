@@ -70,8 +70,8 @@ export async function POST(request: NextRequest) {
 
     // Annotate variants with OncoKB, ClinVar, and DGIdb
     console.log('🔬 Annotating variants with external sources...');
-    const { evidence, therapies } = await annotateVariants(validatedVariants);
-    console.log(`✅ Generated ${evidence.length} evidence items and ${therapies.length} therapies`);
+    const { evidence, therapies, errors: annotationErrors } = await annotateVariants(validatedVariants);
+    console.log(`Generated ${evidence.length} evidence items, ${therapies.length} therapies, ${annotationErrors.length} annotation errors`);
 
     // Store case data
     const caseData = await CaseService.create({
@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
       variants: validatedVariants,
       evidence,
       therapies,
+      annotationErrors: annotationErrors.length > 0 ? annotationErrors : undefined,
       qc: {
         source: 'VCF',
         metrics: {

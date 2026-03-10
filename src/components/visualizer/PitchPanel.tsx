@@ -124,7 +124,7 @@ export function PitchPanel() {
                 </div>
               </div>
               <div className="text-xs text-center text-emerald-600 mt-2 italic">
-                Fallback inteligente con Claude cuando las APIs no están disponibles
+                Solo datos validados de bases de conocimiento
               </div>
             </div>
             <Arrow />
@@ -357,7 +357,7 @@ export function PitchPanel() {
         {/* ── Footer ── */}
         <div className="text-center py-4 text-sm text-muted-foreground">
           <p className="font-semibold">OncoFHIR Lens</p>
-          <p>Tesis de grado — Ingeniería en Informática</p>
+          <p>Tesis de grado — Licenciatura en Bioinformática</p>
           <p className="mt-1">Santiago Rodriguez Salinas</p>
         </div>
 
@@ -400,7 +400,7 @@ const VALUE_PROPS = [
   {
     icon: '\u{1F50D}',
     title: 'Multi-Source Annotation',
-    description: 'Consulta OncoKB, ClinVar y DGIdb en paralelo con fallback inteligente de IA.',
+    description: 'Consulta OncoKB, ClinVar y DGIdb en paralelo. Solo datos validados de bases de conocimiento.',
     bg: 'bg-emerald-100',
   },
   {

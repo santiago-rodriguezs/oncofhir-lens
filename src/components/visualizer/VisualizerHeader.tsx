@@ -18,18 +18,18 @@ export function VisualizerHeader({ metadata, onSearch, onFilterChange }: Visuali
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold">
-              Case: {metadata.patientId}
+              Caso: {metadata.patientId}
             </h1>
             <Badge variant={metadata.reportSource === 'PDF' ? 'default' : 'secondary'}>
               {metadata.reportSource}
             </Badge>
             <Badge variant="outline" className="text-yellow-600">
-              {Math.round(metadata.parsingConfidence * 100)}% confidence
+              {Math.round(metadata.parsingConfidence * 100)}% confianza
             </Badge>
           </div>
           <div className="flex items-center gap-2">
             {metadata.sampleId && (
-              <Badge variant="outline">Sample: {metadata.sampleId}</Badge>
+              <Badge variant="outline">Muestra: {metadata.sampleId}</Badge>
             )}
             {metadata.tumorType && (
               <Badge variant="outline">Tumor: {metadata.tumorType}</Badge>
@@ -42,14 +42,14 @@ export function VisualizerHeader({ metadata, onSearch, onFilterChange }: Visuali
           <div className="relative flex-1">
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search variants, genes, or evidence..."
+              placeholder="Buscar variantes, genes o evidencia..."
               className="pl-8"
               data-search-input="true"
               onChange={(e) => onSearch(e.target.value)}
             />
           </div>
           <Button variant="outline" onClick={() => onFilterChange({})}>
-            Clear Filters
+            Limpiar filtros
           </Button>
         </div>
       </div>

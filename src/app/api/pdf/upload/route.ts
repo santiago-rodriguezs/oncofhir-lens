@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getClaudeModel } from '@/lib/model';
 import { pdfToText } from "@/lib/pdf";
 import { sonnetJson } from "@/lib/sonnet";
 import { VariantArraySchema } from "@/lib/schemas";
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     
     // Extract variants using Sonnet 4.6
     const variants = await sonnetJson(
-      "claude-sonnet-4-6-20250828",
+      getClaudeModel(),
       system,
       JSON.stringify(user),
       "VariantArray",
@@ -79,8 +80,8 @@ export async function POST(request: NextRequest) {
 
     // Annotate variants with OncoKB, ClinVar, and DGIdb
     console.log('🔬 Annotating variants with external sources...');
-    const { evidence, therapies } = await annotateVariants(variants);
-    console.log(`✅ Generated ${evidence.length} evidence items and ${therapies.length} therapies`);
+    const { evidence, therapies, errors: annotationErrors } = await annotateVariants(variants);
+    console.log(`Generated ${evidence.length} evidence items, ${therapies.length} therapies, ${annotationErrors.length} annotation errors`);
 
     // Store case data
     const caseData = await CaseService.create({
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
       variants,
       evidence,
       therapies,
+      annotationErrors: annotationErrors.length > 0 ? annotationErrors : undefined,
       qc: {
         source: 'PDF',
         metrics: {

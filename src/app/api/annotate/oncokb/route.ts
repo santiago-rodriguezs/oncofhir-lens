@@ -1,4 +1,5 @@
 import { sonnetJson } from '@/lib/sonnet';
+import { getClaudeModel } from '@/lib/model';
 import { Variant, VariantSchema, Annotation, AnnotationSchema } from '@/lib/schemas';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -127,7 +128,7 @@ async function annotateSonnet(variants: Variant[]): Promise<Annotation[]> {
   `;
   
   return await sonnetJson(
-    "claude-sonnet-4-6-20250828",
+    getClaudeModel(),
     system,
     userPrompt,
     'Annotation[]',
@@ -172,17 +173,14 @@ export async function POST(request: NextRequest) {
         
         let annotations: Annotation[];
         
-        // Try OncoKB API if configured, otherwise use Sonnet
+        // Try OncoKB API if configured
         if (process.env.ONCOKB_AUTH_TOKEN && process.env.ONCOKB_BASE_URL) {
-          try {
-            annotations = await fetchOncoKB(variants);
-          } catch (error) {
-            console.error('OncoKB API error, falling back to Sonnet:', error);
-            annotations = await annotateSonnet(variants);
-          }
+          annotations = await fetchOncoKB(variants);
         } else {
-          // Use Sonnet for annotation
-          annotations = await annotateSonnet(variants);
+          return NextResponse.json(
+            { error: 'OncoKB API no configurada (ONCOKB_AUTH_TOKEN / ONCOKB_BASE_URL)' },
+            { status: 503 }
+          );
         }
         
         // Validate annotations

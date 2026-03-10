@@ -1,4 +1,5 @@
 import { sonnetJson } from './sonnet';
+import { getClaudeModel } from './model';
 import { Variant } from './schemas';
 import { z } from 'zod';
 
@@ -163,7 +164,7 @@ IMPORTANTE: Responde SOLO con JSON válido sin ningún formato markdown, sin bac
   `;
   
   return await sonnetJson(
-    "claude-sonnet-4-6-20250828",
+    getClaudeModel(),
     system,
     userPrompt,
     'ClinVarAnnotations',

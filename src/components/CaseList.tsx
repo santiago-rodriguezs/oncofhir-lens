@@ -35,7 +35,7 @@ export function CaseList({ cases }: CaseListProps) {
       <div className="relative">
         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Search cases..."
+          placeholder="Buscar casos..."
           className="pl-8"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -44,7 +44,7 @@ export function CaseList({ cases }: CaseListProps) {
 
       {filteredCases.length === 0 ? (
         <Card className="p-6 text-center text-muted-foreground">
-          No cases found.
+          No se encontraron casos.
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -58,7 +58,7 @@ export function CaseList({ cases }: CaseListProps) {
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">{caseItem.patientId}</h3>
                   <Badge variant="outline">
-                    {caseItem.variantCount} variants
+                    {caseItem.variantCount} variantes
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">{caseItem.label}</p>
@@ -76,7 +76,7 @@ export function CaseList({ cases }: CaseListProps) {
           variant="outline"
           onClick={() => router.push('/')}
         >
-          Upload New Case
+          Subir Nuevo Caso
         </Button>
       </div>
     </div>

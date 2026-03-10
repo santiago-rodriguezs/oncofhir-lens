@@ -12,8 +12,8 @@ export async function GET(request: NextRequest) {
     // Transform cases to list items
     const caseList = cases.map(caseData => ({
       id: caseData.id,
-      patientId: caseData.metadata.patientId,
-      label: `${caseData.metadata.reportSource} Report - ${caseData.metadata.patientId}`,
+      patientId: caseData.metadata.patientId || caseData.id,
+      label: `${caseData.metadata.reportSource} — ${caseData.metadata.patientId || caseData.id}`,
       date: caseData.metadata.timestamp,
       variantCount: caseData.variants.length,
     }));

@@ -31,12 +31,14 @@ export async function POST(request: NextRequest) {
       `[Claude Report] Generating report for ${variants.length} variants`
     );
 
+    const model = request.headers.get('x-claude-model') || undefined;
     const report = await generateGenomicReport({
       variants,
       evidence,
       therapies,
       interpretations,
       context,
+      model,
     });
 
     console.log('[Claude Report] Report generated successfully');

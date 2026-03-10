@@ -44,17 +44,17 @@ export function QCPanel({ qc, parsingDetails }: QCPanelProps) {
     <div className="space-y-6">
       {/* QC Summary */}
       <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Quality Control Summary</h3>
+        <h3 className="text-lg font-semibold mb-4">Resumen de Control de Calidad</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">Source</h4>
+            <h4 className="text-sm font-medium text-muted-foreground">Fuente</h4>
             <Badge variant={qc.source === 'PDF' ? 'default' : 'secondary'}>
               {qc.source}
             </Badge>
           </div>
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">
-              Overall Confidence
+              Confianza General
             </h4>
             <Badge
               variant="outline"
@@ -71,12 +71,12 @@ export function QCPanel({ qc, parsingDetails }: QCPanelProps) {
           </div>
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">
-              Quality Flags
+              Alertas de Calidad
             </h4>
             <div className="flex flex-wrap gap-2">
               {qc.flags.length === 0 ? (
                 <Badge variant="outline" className="text-green-600">
-                  No issues detected
+                  Sin problemas detectados
                 </Badge>
               ) : (
                 qc.flags.map((flag, index) => (
@@ -93,8 +93,8 @@ export function QCPanel({ qc, parsingDetails }: QCPanelProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Metric</TableHead>
-              <TableHead>Value</TableHead>
+              <TableHead>Métrica</TableHead>
+              <TableHead>Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -112,23 +112,23 @@ export function QCPanel({ qc, parsingDetails }: QCPanelProps) {
       <Accordion type="single" collapsible>
         {qc.source === 'PDF' && parsingDetails?.pagesProcessed && (
           <AccordionItem value="pdf">
-            <AccordionTrigger>PDF Processing Details</AccordionTrigger>
+            <AccordionTrigger>Detalles de Procesamiento PDF</AccordionTrigger>
             <AccordionContent>
               <Card className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                      Pages
+                      Páginas
                     </h4>
                     <p>
-                      Processed {parsingDetails?.pagesProcessed} of{' '}
-                      {parsingDetails?.totalPages} pages
+                      Procesadas {parsingDetails?.pagesProcessed} de{' '}
+                      {parsingDetails?.totalPages} páginas
                     </p>
                   </div>
                   {parsingDetails?.ocrConfidence && (
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        OCR Confidence
+                        Confianza OCR
                       </h4>
                       <Badge variant="outline">
                         {Math.round((parsingDetails?.ocrConfidence ?? 0) * 100)}%
@@ -143,20 +143,20 @@ export function QCPanel({ qc, parsingDetails }: QCPanelProps) {
 
         {qc.source === 'VCF' && parsingDetails?.coverage && (
           <AccordionItem value="vcf">
-            <AccordionTrigger>Sequencing Coverage Details</AccordionTrigger>
+            <AccordionTrigger>Detalles de Cobertura de Secuenciación</AccordionTrigger>
             <AccordionContent>
               <Card className="p-4">
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        Mean Coverage
+                        Cobertura Media
                       </h4>
                       <p>{parsingDetails?.coverage?.mean}x</p>
                     </div>
                     <div>
                       <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                        Median Coverage
+                        Cobertura Mediana
                       </h4>
                       <p>{parsingDetails?.coverage?.median}x</p>
                     </div>
@@ -164,13 +164,13 @@ export function QCPanel({ qc, parsingDetails }: QCPanelProps) {
 
                   <div>
                     <h4 className="text-sm font-medium text-muted-foreground mb-2">
-                      Regional Coverage
+                      Cobertura Regional
                     </h4>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Region</TableHead>
-                          <TableHead>Coverage</TableHead>
+                          <TableHead>Región</TableHead>
+                          <TableHead>Cobertura</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -191,7 +191,7 @@ export function QCPanel({ qc, parsingDetails }: QCPanelProps) {
 
         {parsingDetails?.assayMeta && (
           <AccordionItem value="assay">
-            <AccordionTrigger>Assay Information</AccordionTrigger>
+            <AccordionTrigger>Información del Ensayo</AccordionTrigger>
             <AccordionContent>
               <Card className="p-4">
                 <div className="grid grid-cols-2 gap-4">

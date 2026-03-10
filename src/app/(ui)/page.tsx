@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { useDropzone } from 'react-dropzone';
 import { useVcfProcessor } from '@/lib/hooks/useVcfProcessor';
 import { usePdfProcessor } from '@/lib/hooks/usePdfProcessor';
-import FileUploader from './FileUploader';
 import { GeneticLoader } from '@/components/GeneticLoader';
 
 export default function Home() {
   const [workflowMode, setWorkflowMode] = useState<'pdf' | 'vcf'>('pdf');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const vcf = useVcfProcessor();
   const pdf = usePdfProcessor();
@@ -16,14 +17,29 @@ export default function Home() {
   const error = vcf.error || pdf.error;
 
   const processingMessage = () => {
-    if (vcf.isProcessing) return { message: 'Analyzing Variants', submessage: 'Parsing VCF file and querying OncoKB, ClinVar, and DGIdb...' };
-    if (pdf.isProcessing) return { message: 'Extracting Genomic Data', submessage: 'Extracting text and identifying variants with AI...' };
-    return { message: 'Processing', submessage: 'Please wait...' };
+    if (vcf.isProcessing) return { message: 'Analizando Variantes', submessage: 'Parseando VCF y consultando OncoKB, ClinVar y DGIdb...' };
+    if (pdf.isProcessing) return { message: 'Extrayendo Datos Genómicos', submessage: 'Extrayendo texto e identificando variantes con IA...' };
+    return { message: 'Procesando', submessage: 'Por favor espere...' };
   };
 
+  const onDropPdf = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(acceptedFiles[0]);
+      pdf.handleFileChange({ target: { files: dataTransfer.files } } as React.ChangeEvent<HTMLInputElement>);
+    }
+  }, [pdf]);
+
+  const pdfDropzone = useDropzone({
+    onDrop: onDropPdf,
+    accept: { 'application/pdf': ['.pdf'] },
+    disabled: isProcessing,
+    maxFiles: 1,
+    noClick: false,
+  });
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Genetic Loader Overlay */}
+    <div className="min-h-[calc(100vh-180px)] flex flex-col">
       {isProcessing && (
         <GeneticLoader
           message={processingMessage().message}
@@ -31,121 +47,233 @@ export default function Home() {
         />
       )}
 
-      <h1 className="text-3xl font-bold mb-6">OncoFHIR Lens</h1>
+      {/* Hero */}
+      <div className="text-center py-10 mb-6">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium mb-4">
+          <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
+          Powered by Claude Sonnet / Opus 4.6
+        </div>
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 mb-3">
+          Genómica de Precisión
+        </h1>
+        <p className="text-slate-500 max-w-xl mx-auto text-base">
+          Subí un estudio genómico y obtené variantes anotadas, interpretación clínica
+          y datos interoperables en FHIR y GA4GH en segundos.
+        </p>
 
-      {/* Workflow Selector */}
-      <div className="mb-6">
-        <div className="flex border-b border-gray-200">
-          <button
-            className={`py-2 px-4 font-medium ${workflowMode === 'pdf' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setWorkflowMode('pdf')}
-          >
-            Subir estudio genómico (PDF)
-          </button>
-          <button
-            className={`py-2 px-4 font-medium ${workflowMode === 'vcf' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setWorkflowMode('vcf')}
-          >
-            Procesar VCF (opcional)
-          </button>
+        <div className="flex flex-wrap justify-center gap-1.5 mt-5">
+          {BADGES.map((b) => (
+            <span key={b} className="text-xs px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-slate-500">
+              {b}
+            </span>
+          ))}
         </div>
       </div>
 
-      {/* PDF Input - Primary Workflow */}
-      {workflowMode === 'pdf' && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Subir estudio genómico (PDF)</h2>
+      {/* Workflow Selector */}
+      <div className="max-w-2xl mx-auto w-full">
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setWorkflowMode('pdf')}
+            className={`flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all border ${
+              workflowMode === 'pdf'
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            <span className="block text-base">Reporte PDF</span>
+            <span className={`text-xs font-normal ${workflowMode === 'pdf' ? 'text-slate-400' : 'text-slate-400'}`}>
+              Foundation, Guardant, etc.
+            </span>
+          </button>
+          <button
+            onClick={() => setWorkflowMode('vcf')}
+            className={`flex-1 py-3 px-4 rounded-lg text-sm font-semibold transition-all border ${
+              workflowMode === 'vcf'
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+            }`}
+          >
+            <span className="block text-base">Archivo VCF</span>
+            <span className={`text-xs font-normal ${workflowMode === 'vcf' ? 'text-slate-400' : 'text-slate-400'}`}>
+              NGS / WES / WGS
+            </span>
+          </button>
+        </div>
 
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Seleccionar archivo PDF
-            </label>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={pdf.handleFileChange}
-              className="block w-full text-sm text-gray-500
-                file:mr-4 file:py-2 file:px-4
-                file:rounded-md file:border-0
-                file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100"
+        {/* PDF Upload */}
+        {workflowMode === 'pdf' && (
+          <div className="space-y-4">
+            <div
+              {...pdfDropzone.getRootProps()}
+              className={`relative border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${
+                pdfDropzone.isDragActive
+                  ? 'border-slate-400 bg-slate-50'
+                  : pdf.selectedFile
+                  ? 'border-slate-300 bg-slate-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              <input {...pdfDropzone.getInputProps()} />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={pdf.handleFileChange}
+                className="hidden"
+              />
+
+              {pdf.selectedFile ? (
+                <div className="space-y-2">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <p className="font-semibold text-slate-800">{pdf.selectedFile.name}</p>
+                  <p className="text-xs text-slate-500">
+                    {(pdf.selectedFile.size / 1024).toFixed(0)} KB — Listo para procesar
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m6.75 12l-3-3m0 0l-3 3m3-3v6m-1.5-15H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-700">
+                      {pdfDropzone.isDragActive ? 'Soltar archivo aquí' : 'Arrastrá un PDF o hacé click para seleccionar'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Reportes de secuenciación en formato PDF
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              className="w-full py-3 px-4 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
+              onClick={pdf.processPdf}
+              disabled={isProcessing || !pdf.selectedFile}
+            >
+              {pdf.isProcessing ? 'Procesando...' : 'Extraer variantes y analizar'}
+            </button>
+          </div>
+        )}
+
+        {/* VCF Upload */}
+        {workflowMode === 'vcf' && (
+          <div className="space-y-4">
+            <VcfDropzone onFileLoaded={vcf.setVcfText} disabled={isProcessing} />
+
+            <div>
+              <label className="block text-xs font-medium text-slate-500 mb-1.5">
+                O pegá el contenido VCF directamente:
+              </label>
+              <textarea
+                className="w-full h-32 p-3 border border-slate-200 rounded-lg text-sm font-mono bg-white focus:border-slate-400 focus:ring-1 focus:ring-slate-200 outline-none transition-all resize-none"
+                placeholder="##fileformat=VCFv4.2&#10;#CHROM  POS  ID  REF  ALT  QUAL  FILTER  INFO&#10;..."
+                value={vcf.vcfText}
+                onChange={(e) => vcf.setVcfText(e.target.value)}
+              />
+            </div>
+
+            <button
+              className="w-full py-3 px-4 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
+              onClick={vcf.processVcf}
+              disabled={isProcessing || !vcf.vcfText.trim()}
+            >
+              {vcf.isProcessing ? 'Procesando...' : 'Procesar VCF'}
+            </button>
+
+            <button
+              className="w-full py-2.5 px-3 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 disabled:opacity-50 transition-all"
+              onClick={vcf.loadRichExample}
               disabled={isProcessing}
-            />
+            >
+              Cargar ejemplo oncológico
+              <span className="block text-xs text-slate-400 font-normal">21 variantes con anotaciones clínicas</span>
+            </button>
           </div>
+        )}
 
-          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
-            <p className="text-sm text-yellow-700">
-              Esta función extrae variantes de un PDF clínico usando Claude Sonnet 4.6.
-              Los mejores resultados se obtienen con informes de texto seleccionable (no escaneados).
-            </p>
+        {/* Error */}
+        {error && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+            {error}
           </div>
+        )}
+      </div>
 
-          <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-            onClick={pdf.processPdf}
-            disabled={isProcessing || !pdf.selectedFile}
-          >
-            {pdf.isProcessing ? 'Procesando...' : 'Extraer variantes'}
-          </button>
+      {/* Pipeline mini */}
+      <div className="max-w-2xl mx-auto w-full mt-10 mb-4">
+        <div className="grid grid-cols-4 gap-3 text-center">
+          {STEPS.map((step, idx) => (
+            <div key={step.label} className="flex flex-col items-center">
+              <div className="w-9 h-9 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 text-sm font-bold border border-slate-200">
+                {idx + 1}
+              </div>
+              <p className="text-xs font-medium text-slate-600 mt-1.5">{step.label}</p>
+              <p className="text-[10px] text-slate-400">{step.sub}</p>
+            </div>
+          ))}
         </div>
-      )}
-
-      {/* VCF Input - Secondary Workflow */}
-      {workflowMode === 'vcf' && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-2">Procesar VCF</h2>
-
-          {/* Dropzone para subir archivos */}
-          <FileUploader onFileLoaded={vcf.setVcfText} disabled={isProcessing} />
-
-          <div className="mt-4">
-            <h3 className="text-md font-medium mb-2">O pegue el contenido VCF:</h3>
-            <textarea
-              className="w-full h-40 p-2 border border-gray-300 rounded"
-              placeholder="Pegue el contenido del archivo VCF aquí..."
-              value={vcf.vcfText}
-              onChange={(e) => vcf.setVcfText(e.target.value)}
-            />
-          </div>
-
-          <button
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
-            onClick={vcf.processVcf}
-            disabled={isProcessing || !vcf.vcfText.trim()}
-          >
-            {vcf.isProcessing ? 'Procesando...' : 'Procesar VCF'}
-          </button>
-
-          <button
-            className="mt-4 ml-2 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 disabled:bg-gray-400"
-            onClick={vcf.loadSample}
-            disabled={isProcessing}
-          >
-            Cargar ejemplo VCF
-          </button>
-
-          <button
-            className="mt-4 ml-2 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
-            onClick={vcf.loadRichExample}
-            disabled={isProcessing}
-          >
-            Cargar ejemplo enriquecido
-          </button>
-        </div>
-      )}
-
-      {/* Error display */}
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="mt-8 pt-4 border-t border-gray-200 text-center text-gray-500 text-sm">
-        OncoFHIR Lens - Powered by Claude Sonnet 4.6
       </div>
     </div>
   );
 }
+
+function VcfDropzone({ onFileLoaded, disabled }: { onFileLoaded: (text: string) => void; disabled: boolean }) {
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length === 0) return;
+      const reader = new FileReader();
+      reader.onload = () => onFileLoaded(reader.result as string);
+      reader.readAsText(acceptedFiles[0]);
+    },
+    [onFileLoaded]
+  );
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'text/plain': ['.vcf', '.txt'] },
+    disabled,
+    maxFiles: 1,
+  });
+
+  return (
+    <div
+      {...getRootProps()}
+      className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
+        isDragActive
+          ? 'border-slate-400 bg-slate-50'
+          : 'border-slate-200 bg-white hover:border-slate-300'
+      } ${disabled ? 'opacity-50 pointer-events-none' : ''}`}
+    >
+      <input {...getInputProps()} />
+      <div className="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-3">
+        <svg className="w-6 h-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+        </svg>
+      </div>
+      <p className="font-medium text-slate-700">
+        {isDragActive ? 'Soltar archivo aquí' : 'Arrastrá un archivo VCF o hacé click'}
+      </p>
+      <p className="text-xs text-slate-400 mt-1">Formato VCFv4.x</p>
+    </div>
+  );
+}
+
+const BADGES = [
+  'OncoKB', 'ClinVar', 'DGIdb', 'FHIR Genomics IG', 'GA4GH VRS', 'Phenopackets v2', 'AMP/ASCO/CAP',
+];
+
+const STEPS = [
+  { label: 'Subir', sub: 'PDF o VCF' },
+  { label: 'Anotar', sub: '3 fuentes' },
+  { label: 'Interpretar', sub: 'AMP Tiers' },
+  { label: 'Exportar', sub: 'FHIR + GA4GH' },
+];

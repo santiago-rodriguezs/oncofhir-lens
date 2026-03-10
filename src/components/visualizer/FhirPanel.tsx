@@ -33,7 +33,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
         const data = await response.json();
         setBundle(data.bundle);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        setError(err instanceof Error ? err.message : 'Error desconocido');
       } finally {
         setLoading(false);
       }
@@ -53,7 +53,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
       const data = await response.json();
       setPhenopacket(data.phenopacket);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error generating Phenopacket');
+      setError(err instanceof Error ? err.message : 'Error al generar Phenopacket');
     } finally {
       setLoadingPhenopacket(false);
     }
@@ -93,7 +93,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
     return (
       <Card className="p-6">
         <div className="text-center text-red-600">
-          <p className="font-semibold">Error loading FHIR Bundle</p>
+          <p className="font-semibold">Error al cargar el FHIR Bundle</p>
           <p className="text-sm mt-2">{error}</p>
         </div>
       </Card>
@@ -111,7 +111,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
             GA4GH Phenopacket
           </TabsTrigger>
           <TabsTrigger value="raw-json">
-            Raw JSON
+            JSON sin procesar
           </TabsTrigger>
         </TabsList>
       </div>
@@ -142,7 +142,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                     ) : (
                       <Copy className="h-4 w-4 mr-1" />
                     )}
-                    Copy
+                    Copiar
                   </Button>
                   <Button
                     variant="outline"
@@ -155,7 +155,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                     }
                   >
                     <Download className="h-4 w-4 mr-1" />
-                    Download
+                    Descargar
                   </Button>
                 </div>
               </div>
@@ -167,7 +167,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Profiles: genomics-report, variant, diagnostic-implication,
+                Perfiles: genomics-report, variant, diagnostic-implication,
                 therapeutic-implication
               </p>
             </Card>
@@ -175,7 +175,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
           </div>
         ) : (
           <Card className="p-6 text-center text-muted-foreground">
-            No FHIR bundle available
+            No hay FHIR bundle disponible
           </Card>
         )}
       </TabsContent>
@@ -200,8 +200,8 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                     size="sm"
                   >
                     {loadingPhenopacket
-                      ? 'Generating...'
-                      : 'Generate Phenopacket'}
+                      ? 'Generando...'
+                      : 'Generar Phenopacket'}
                   </Button>
                 ) : (
                   <>
@@ -217,7 +217,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                       ) : (
                         <Copy className="h-4 w-4 mr-1" />
                       )}
-                      Copy
+                      Copiar
                     </Button>
                     <Button
                       variant="outline"
@@ -230,15 +230,15 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                       }
                     >
                       <Download className="h-4 w-4 mr-1" />
-                      Download
+                      Descargar
                     </Button>
                   </>
                 )}
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Includes: Individual, Biosample, Genomic Interpretations with
-              VRS alleles, Medical Actions, Disease
+              Incluye: Individual, Biosample, Interpretaciones Genómicas con
+              alelos VRS, Acciones Médicas, Enfermedad
             </p>
           </Card>
           {phenopacket && (
@@ -254,12 +254,12 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
             <Card className="p-8 text-center">
               <FileJson className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium mb-2">
-                GA4GH Phenopacket Export
+                Exportar GA4GH Phenopacket
               </h3>
               <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Export this case as a GA4GH Phenopacket v2, including VRS
-                variant representations, ACMG classifications, and treatment
-                data.
+                Exportar este caso como GA4GH Phenopacket v2, incluyendo
+                representaciones de variantes VRS, clasificaciones ACMG y datos
+                de tratamiento.
               </p>
             </Card>
           )}
@@ -271,7 +271,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
         <Card className="p-4">
           <ScrollArea className="max-h-[600px]">
             <pre className="text-xs font-mono whitespace-pre-wrap">
-              {bundle ? JSON.stringify(bundle, null, 2) : 'No data'}
+              {bundle ? JSON.stringify(bundle, null, 2) : 'Sin datos'}
             </pre>
           </ScrollArea>
         </Card>

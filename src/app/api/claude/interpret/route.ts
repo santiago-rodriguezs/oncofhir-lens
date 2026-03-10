@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       `[Claude Interpret] Interpreting ${variants.length} variants`
     );
 
-    const interpretations = await interpretVariants(variants, context);
+    const model = request.headers.get('x-claude-model') || undefined;
+    const interpretations = await interpretVariants(variants, context, model);
 
     console.log(
       `[Claude Interpret] Generated ${interpretations.length} interpretations`

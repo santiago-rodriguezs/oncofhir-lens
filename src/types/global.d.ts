@@ -12,6 +12,8 @@ declare namespace NodeJS {
     ONCOKB_BASE_URL?: string;
     GCP_VERTEX_LOCATION?: string;
     GEMINI_MODEL?: string;
+    ANTHROPIC_API_KEY?: string;
+    CLAUDE_MODEL?: string;
     DEMO_SECRET: string;
     NEXT_PUBLIC_DEMO_SECRET?: string;
     NODE_ENV: 'development' | 'production' | 'test';

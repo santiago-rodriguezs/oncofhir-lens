@@ -12,7 +12,6 @@ import { AuditPanel } from '@/components/visualizer/AuditPanel';
 import { FhirPanel } from '@/components/visualizer/FhirPanel';
 import { ClinicalInsightsPanel } from '@/components/visualizer/ClinicalInsightsPanel';
 import { TumorBoardChat } from '@/components/visualizer/TumorBoardChat';
-import { HowItWorksPanel } from '@/components/visualizer/HowItWorksPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,6 +27,7 @@ interface VisualizerClientProps {
     evidence: Evidence[];
     therapies: Therapy[];
     qc: QualityControl;
+    annotationErrors?: { source: string; message: string }[];
     extractedText?: string[];
     highlights?: Array<{
       pageNumber: number;
@@ -103,17 +103,18 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
       <main className="flex-1 container py-6">
         <Tabs value={currentTab} onValueChange={setTab} className="space-y-4">
           <TabsList>
-            <TabsTrigger value="summary">Summary</TabsTrigger>
-            <TabsTrigger value="variants">Variants</TabsTrigger>
-            <TabsTrigger value="annotations">Annotations</TabsTrigger>
-            <TabsTrigger value="therapies">Therapies</TabsTrigger>
-            <TabsTrigger value="report">Report Viewer</TabsTrigger>
-            <TabsTrigger value="insights">Clinical Insights</TabsTrigger>
+            <TabsTrigger value="summary">Resumen</TabsTrigger>
+            <TabsTrigger value="variants">Variantes</TabsTrigger>
+            <TabsTrigger value="annotations">Anotaciones</TabsTrigger>
+            <TabsTrigger value="therapies">Terapias</TabsTrigger>
+            {initialData.metadata.reportSource === 'PDF' && (
+              <TabsTrigger value="report">Visor de Reporte</TabsTrigger>
+            )}
+            <TabsTrigger value="insights">Insights Clínicos</TabsTrigger>
             <TabsTrigger value="chat">Tumor Board</TabsTrigger>
             <TabsTrigger value="fhir">FHIR Bundle</TabsTrigger>
-            <TabsTrigger value="qc">QC & Provenance</TabsTrigger>
-            <TabsTrigger value="audit">Audit & Notes</TabsTrigger>
-            <TabsTrigger value="how-it-works">How It Works</TabsTrigger>
+            <TabsTrigger value="qc">QC y Procedencia</TabsTrigger>
+            <TabsTrigger value="audit">Auditoría y Notas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="summary">
@@ -144,6 +145,7 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
               <AnnotationsPanel
                 selectedVariant={selectedVariant}
                 evidence={initialData.evidence}
+                annotationErrors={initialData.annotationErrors}
                 onEvidenceSelect={(evidence) => {
                   // Handle evidence selection
                   console.log('Selected evidence:', evidence);
@@ -232,11 +234,6 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
                   });
                 }}
               />
-            </Suspense>
-          </TabsContent>
-          <TabsContent value="how-it-works">
-            <Suspense fallback={<TabSkeleton />}>
-              <HowItWorksPanel />
             </Suspense>
           </TabsContent>
         </Tabs>
