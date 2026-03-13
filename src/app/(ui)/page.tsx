@@ -27,7 +27,7 @@ export default function Home() {
   const error = vcf.error || pdf.error;
 
   const processingMessage = () => {
-    if (vcf.isProcessing) return { message: 'Analizando Variantes', submessage: 'Parseando VCF y consultando OncoKB, ClinVar y DGIdb...' };
+    if (vcf.isProcessing) return { message: 'Analizando Variantes', submessage: 'Parseando VCF y consultando OncoKB, ClinVar, DGIdb y COSMIC...' };
     if (pdf.isProcessing) return { message: 'Extrayendo Datos Genómicos', submessage: 'Extrayendo texto e identificando variantes con IA...' };
     return { message: 'Procesando', submessage: 'Por favor espere...' };
   };

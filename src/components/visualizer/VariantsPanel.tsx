@@ -198,6 +198,49 @@ const columns: ColumnDef<Variant>[] = [
     },
   },
   {
+    accessorKey: 'gnomadAF',
+    header: 'Pop. Freq',
+    cell: ({ row }) => {
+      const af = row.original.gnomadAF;
+      const isPolymorphism = row.original.isCommonPolymorphism;
+      if (af == null) return <span className="text-xs text-muted-foreground">-</span>;
+      const pct = (af * 100).toFixed(af < 0.001 ? 3 : 2);
+      return (
+        <Badge
+          variant="outline"
+          className={`text-xs font-mono ${
+            isPolymorphism
+              ? 'border-red-300 text-red-700 bg-red-50'
+              : af > 0.001
+              ? 'border-amber-300 text-amber-700 bg-amber-50'
+              : 'border-slate-200 text-slate-600'
+          }`}
+        >
+          {pct}%
+        </Badge>
+      );
+    },
+  },
+  {
+    accessorKey: 'cosmicId',
+    header: 'COSMIC',
+    cell: ({ row }) => {
+      const cosmicId = row.original.cosmicId;
+      const count = row.original.cosmicCount;
+      if (!cosmicId && count == null) return <span className="text-xs text-muted-foreground">-</span>;
+      return (
+        <div className="flex flex-col">
+          {cosmicId && (
+            <span className="text-xs font-mono text-purple-700">{cosmicId}</span>
+          )}
+          {count != null && count > 0 && (
+            <span className="text-xs text-muted-foreground">{count}×</span>
+          )}
+        </div>
+      );
+    },
+  },
+  {
     id: 'actions',
     cell: ({ row }) => {
       const variant = row.original;
@@ -285,6 +328,8 @@ export function VariantsPanel({
   );
   const vafs = variants.filter((v) => v.vaf != null).map((v) => v.vaf!);
   const maxVaf = vafs.length > 0 ? Math.max(...vafs) : null;
+  const polymorphisms = variants.filter((v) => v.isCommonPolymorphism);
+  const cosmicHits = variants.filter((v) => v.cosmicId);
 
   return (
     <div className="space-y-4">
@@ -317,6 +362,22 @@ export function VariantsPanel({
             <TrendingUp className="h-3.5 w-3.5 text-amber-600" />
             <span className="text-xs font-medium text-amber-700">
               VAF máx: {(maxVaf * 100).toFixed(1)}%
+            </span>
+          </div>
+        )}
+        {polymorphisms.length > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-50 border border-orange-200">
+            <AlertTriangle className="h-3.5 w-3.5 text-orange-600" />
+            <span className="text-xs font-medium text-orange-700">
+              {polymorphisms.length} polimorfismo{polymorphisms.length > 1 ? 's' : ''} (gnomAD &gt;1%)
+            </span>
+          </div>
+        )}
+        {cosmicHits.length > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 border border-purple-200">
+            <Dna className="h-3.5 w-3.5 text-purple-600" />
+            <span className="text-xs font-medium text-purple-700">
+              {cosmicHits.length} en COSMIC
             </span>
           </div>
         )}

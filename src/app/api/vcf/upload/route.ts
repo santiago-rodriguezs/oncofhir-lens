@@ -4,7 +4,7 @@ import { parseVcfToVariants } from '@/lib/vcf';
 import { VariantSchema } from '@/lib/schemas';
 import { generateCaseId } from '@/lib/utils/ids';
 import { CaseService } from '@/lib/cases/service';
-import { annotateVariants } from '@/lib/annotate/service';
+import { annotateVariantsFast } from '@/lib/annotate/service';
 
 // Define Node.js runtime
 export const runtime = 'nodejs';
@@ -77,18 +77,18 @@ export async function POST(request: NextRequest) {
 
     // Annotate variants with OncoKB, ClinVar, and DGIdb
     console.log('🔬 Annotating variants with external sources...');
-    const { evidence, therapies, errors: annotationErrors } = await annotateVariants(validatedVariants);
+    const { variants: annotatedVariants, evidence, therapies, errors: annotationErrors } = await annotateVariantsFast(validatedVariants);
     console.log(`Generated ${evidence.length} evidence items, ${therapies.length} therapies, ${annotationErrors.length} annotation errors`);
 
-    // Enrich variants with annotation data (ClinVar significance, OncoKB level)
-    const enrichedVariants = validatedVariants.map(v => {
+    // Enrich variants with OncoKB/ClinVar levels from evidence
+    const enrichedVariants = annotatedVariants.map(v => {
       const gene = v.gene || '';
       const oncokbEvidence = evidence.find(e => e.source === 'OncoKB' && e.evidenceId.includes(gene));
       const clinvarEvidence = evidence.find(e => e.source === 'ClinVar' && e.evidenceId.includes(gene));
       return {
         ...v,
-        oncokbLevel: oncokbEvidence?.level,
-        clinvarSignificance: clinvarEvidence?.level,
+        oncokbLevel: v.oncokbLevel || oncokbEvidence?.level,
+        clinvarSignificance: v.clinvarSignificance || clinvarEvidence?.level,
       };
     });
 

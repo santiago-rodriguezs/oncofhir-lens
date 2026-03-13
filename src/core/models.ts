@@ -58,11 +58,21 @@ export const Variant = z.object({
     lastUpdated: z.string().optional(),
     variantId: z.string().optional(),
   }).optional(),
+
+  // Population frequency (gnomAD)
+  gnomadAF: z.number().optional(),
+  gnomadPopulations: z.record(z.string(), z.number()).optional(),
+  isCommonPolymorphism: z.boolean().optional(),
+
+  // COSMIC
+  cosmicId: z.string().optional(),
+  cosmicCount: z.number().optional(),
+  cosmicTumorSites: z.array(z.string()).optional(),
 });
 
 export const Evidence = z.object({
   evidenceId: z.string(),
-  source: z.enum(['OncoKB', 'ClinVar', 'Other']),
+  source: z.enum(['OncoKB', 'ClinVar', 'CIViC', 'PharmGKB', 'DGIdb', 'gnomAD', 'COSMIC', 'Other']),
   level: z.string(),
   description: z.string(),
   tumorContext: z.string().optional(),

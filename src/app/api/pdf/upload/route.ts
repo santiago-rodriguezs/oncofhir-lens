@@ -5,7 +5,7 @@ import { sonnetJson } from "@/lib/sonnet";
 import { VariantArraySchema } from "@/lib/schemas";
 import { generateCaseId } from '@/lib/utils/ids';
 import { CaseService } from '@/lib/cases/service';
-import { annotateVariants } from '@/lib/annotate/service';
+import { annotateVariantsFast } from '@/lib/annotate/service';
 
 // Define Node.js runtime
 export const runtime = "nodejs";
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     // Annotate variants with OncoKB, ClinVar, and DGIdb
     console.log('🔬 Annotating variants with external sources...');
-    const { evidence, therapies, errors: annotationErrors } = await annotateVariants(variants);
+    const { variants: annotatedVariants, evidence, therapies, errors: annotationErrors } = await annotateVariantsFast(variants);
     console.log(`Generated ${evidence.length} evidence items, ${therapies.length} therapies, ${annotationErrors.length} annotation errors`);
 
     // Store case data
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
         parsingConfidence: 0.95,
         timestamp: new Date().toISOString(),
       },
-      variants,
+      variants: annotatedVariants,
       evidence,
       therapies,
       annotationErrors: annotationErrors.length > 0 ? annotationErrors : undefined,

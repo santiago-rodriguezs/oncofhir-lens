@@ -633,6 +633,30 @@ const INTEGRATIONS = [
     active: true,
   },
   {
+    service: 'CIViC',
+    usage: 'Evidencia clínica curada: niveles A-E, tipos (predictivo/diagnóstico/pronóstico), significancia, citas PubMed',
+    cost: 'Gratis (CC0)',
+    active: true,
+  },
+  {
+    service: 'PharmGKB',
+    usage: 'Farmacogenómica: anotaciones clínicas 1A-2B, toxicidad, dosificación, drug labels FDA/EMA',
+    cost: 'Gratis (CC BY-SA 4.0)',
+    active: true,
+  },
+  {
+    service: 'gnomAD',
+    usage: 'Frecuencias alélicas poblacionales: filtrado de polimorfismos comunes (AF >1%), frecuencia por etnia',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
+    service: 'COSMIC (MyVariant.info)',
+    usage: 'Mutaciones somáticas en cáncer: COSMIC ID, frecuencia de mutación en tumores, sitios tumorales',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
     service: 'Vercel',
     usage: 'Hosting de la aplicación Next.js, CI/CD automático desde GitHub, dominio y SSL',
     cost: 'Gratis',
