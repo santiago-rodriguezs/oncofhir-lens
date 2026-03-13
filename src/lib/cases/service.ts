@@ -46,7 +46,7 @@ function docToCase(doc: any): Case {
   };
 }
 
-async function useMongo(): Promise<boolean> {
+async function canConnectMongo(): Promise<boolean> {
   try {
     const conn = await connectDB();
     return conn !== null;
@@ -59,7 +59,7 @@ async function useMongo(): Promise<boolean> {
 
 export const CaseService = {
   async create(caseData: Case): Promise<Case> {
-    if (await useMongo()) {
+    if (await canConnectMongo()) {
       const doc = await CaseModel.create({
         caseId: caseData.id,
         metadata: caseData.metadata,
@@ -83,7 +83,7 @@ export const CaseService = {
   },
 
   async get(id: string): Promise<Case | null> {
-    if (await useMongo()) {
+    if (await canConnectMongo()) {
       const doc = await CaseModel.findOne({ caseId: id }).lean();
       return doc ? docToCase(doc) : null;
     }
@@ -91,7 +91,7 @@ export const CaseService = {
   },
 
   async list(): Promise<Case[]> {
-    if (await useMongo()) {
+    if (await canConnectMongo()) {
       const docs = await CaseModel.find().sort({ createdAt: -1 }).lean();
       return docs.map(docToCase);
     }
@@ -99,7 +99,7 @@ export const CaseService = {
   },
 
   async update(id: string, data: Partial<Case>): Promise<Case | null> {
-    if (await useMongo()) {
+    if (await canConnectMongo()) {
       const updateData: any = { ...data };
       delete updateData.id;
       const doc = await CaseModel.findOneAndUpdate(
@@ -117,7 +117,7 @@ export const CaseService = {
   },
 
   async delete(id: string): Promise<boolean> {
-    if (await useMongo()) {
+    if (await canConnectMongo()) {
       const result = await CaseModel.deleteOne({ caseId: id });
       return result.deletedCount > 0;
     }
