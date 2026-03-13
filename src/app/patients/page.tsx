@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Users, Search, RefreshCw, AlertTriangle, Server } from 'lucide-react';
+import { Users, Search, RefreshCw, Server, ServerOff, ArrowRight, Dna } from 'lucide-react';
 
 interface PatientSummary {
   id: string;
@@ -60,6 +60,52 @@ export default function PatientsPage() {
     if (e.key === 'Enter') handleSearch();
   };
 
+  // ── FHIR server unavailable state ──
+  if (!loading && error) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="rounded-full bg-emerald-100 p-2">
+            <Users className="h-6 w-6 text-emerald-700" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Visor de Pacientes</h1>
+            <p className="text-sm text-muted-foreground">
+              Datos genómicos desde el servidor FHIR
+            </p>
+          </div>
+        </div>
+
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          <div className="rounded-full bg-amber-100 p-4 w-fit mx-auto mb-4">
+            <ServerOff className="h-8 w-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-semibold mb-2">Servidor FHIR no disponible</h2>
+          <p className="text-muted-foreground mb-4">
+            No se pudo conectar al servidor HAPI FHIR. Esto no afecta el análisis
+            genómico — podés seguir procesando archivos VCF y PDF normalmente.
+          </p>
+          <p className="text-xs text-muted-foreground mb-6">
+            El servidor FHIR es opcional y se usa para persistir datos en formato
+            HL7 FHIR. Si estás en un entorno local, verificá que Docker esté corriendo.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Dna className="h-4 w-4" />
+                Analizar un caso
+              </Button>
+            </Link>
+            <Button variant="outline" onClick={() => fetchPatients()} className="gap-2">
+              <RefreshCw className="h-4 w-4" />
+              Reintentar conexión
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
       {/* Header */}
@@ -74,7 +120,7 @@ export default function PatientsPage() {
               Datos genómicos desde el servidor FHIR
             </p>
           </div>
-          <Badge variant="outline" className="ml-2 gap-1">
+          <Badge variant="outline" className="ml-2 gap-1 text-emerald-700 border-emerald-300">
             <Server className="h-3 w-3" />
             HAPI FHIR R4
           </Badge>
@@ -94,28 +140,12 @@ export default function PatientsPage() {
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleKeyDown}
           />
-          <Button onClick={handleSearch}>
+          <Button onClick={handleSearch} className="bg-emerald-600 hover:bg-emerald-700">
             <Search className="h-4 w-4 mr-1" />
             Buscar
           </Button>
         </div>
       </Card>
-
-      {/* Error */}
-      {error && (
-        <Card className="p-4 mb-6 border-red-200 bg-red-50">
-          <div className="flex items-center gap-2 text-red-700">
-            <AlertTriangle className="h-5 w-5" />
-            <div>
-              <p className="font-medium">Error de conexión con el servidor FHIR</p>
-              <p className="text-sm mt-1">{error}</p>
-              <p className="text-xs mt-2 text-red-500">
-                Verificá que HAPI FHIR esté corriendo en localhost:8080
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
 
       {/* Patient list */}
       <Card>
@@ -124,13 +154,18 @@ export default function PatientsPage() {
             <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
             Consultando servidor FHIR...
           </div>
-        ) : patients.length === 0 && !error ? (
-          <div className="p-8 text-center text-muted-foreground">
-            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p>No hay pacientes en el servidor FHIR</p>
-            <p className="text-xs mt-1">
-              Procesá un caso desde Inicio para enviar datos al servidor
+        ) : patients.length === 0 ? (
+          <div className="p-8 text-center">
+            <Users className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
+            <p className="font-medium mb-1">No hay pacientes en el servidor FHIR</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Procesá un caso y envialo al servidor FHIR desde la pestaña &quot;FHIR Bundle&quot;
             </p>
+            <Link href="/">
+              <Button variant="outline" size="sm" className="gap-2">
+                Ir a analizar <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         ) : (
           <Table>

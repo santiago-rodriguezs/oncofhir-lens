@@ -34,6 +34,7 @@ import {
   ClipboardList,
   Microscope,
   BarChart3,
+  ServerOff,
 } from 'lucide-react';
 
 interface PatientData {
@@ -249,16 +250,40 @@ export default function PatientDetailPage({
   }
 
   if (error || !data) {
+    const isConnectionError = error?.includes('fetch') || error?.includes('ECONNREFUSED') || error?.includes('Failed') || error?.includes('NetworkError');
     return (
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <Card className="p-8 text-center">
-          <p className="text-red-600 mb-4">{error || 'Paciente no encontrado'}</p>
-          <Link href="/patients">
-            <Button variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Volver
-            </Button>
-          </Link>
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          {isConnectionError ? (
+            <>
+              <div className="rounded-full bg-amber-100 p-4 w-fit mx-auto mb-4">
+                <ServerOff className="h-8 w-8 text-amber-600" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2">Servidor FHIR no disponible</h2>
+              <p className="text-muted-foreground mb-6">
+                No se pudo conectar al servidor HAPI FHIR para obtener los datos de este paciente.
+                Podés seguir analizando casos desde la página principal.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-red-600 mb-4">{error || 'Paciente no encontrado'}</p>
+            </>
+          )}
+          <div className="flex gap-3 justify-center">
+            <Link href="/patients">
+              <Button variant="outline" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Volver a pacientes
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <Dna className="h-4 w-4" />
+                Analizar un caso
+              </Button>
+            </Link>
+          </div>
         </Card>
       </div>
     );

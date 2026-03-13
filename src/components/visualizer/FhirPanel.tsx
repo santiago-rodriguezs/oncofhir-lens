@@ -23,7 +23,7 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const [pushing, setPushing] = useState(false);
-  const [pushResult, setPushResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [pushResult, setPushResult] = useState<{ success: boolean; message: string; isConnectionError?: boolean } | null>(null);
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<any>(null);
 
@@ -86,9 +86,14 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
         message: `${data.resourcesCreated} recursos enviados al servidor FHIR`,
       });
     } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      const isConnectionError = msg.includes('fetch') || msg.includes('ECONNREFUSED') || msg.includes('Failed') || msg.includes('NetworkError');
       setPushResult({
         success: false,
-        message: err instanceof Error ? err.message : 'Error enviando al servidor FHIR',
+        message: isConnectionError
+          ? 'No se pudo conectar al servidor FHIR. El servidor HAPI FHIR no está disponible en este momento, pero podés seguir usando todas las funciones de análisis normalmente.'
+          : msg || 'Error enviando al servidor FHIR',
+        isConnectionError,
       });
     } finally {
       setPushing(false);
@@ -107,9 +112,14 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
       if (!res.ok) throw new Error(await res.text());
       setValidationResult(await res.json());
     } catch (err) {
+      const msg = err instanceof Error ? err.message : '';
+      const isConnectionError = msg.includes('fetch') || msg.includes('ECONNREFUSED') || msg.includes('Failed') || msg.includes('NetworkError');
       setValidationResult({
         valid: false,
-        error: err instanceof Error ? err.message : 'Error de validación',
+        error: isConnectionError
+          ? 'Servidor FHIR no disponible. Podés descargar el bundle y validarlo manualmente en cualquier servidor FHIR.'
+          : msg || 'Error de validación',
+        isConnectionError,
       });
     } finally {
       setValidating(false);
@@ -251,6 +261,8 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                 <div className={`mt-3 rounded-lg p-3 text-sm ${
                   pushResult.success
                     ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : pushResult.isConnectionError
+                    ? 'bg-amber-50 text-amber-800 border border-amber-200'
                     : 'bg-red-50 text-red-700 border border-red-200'
                 }`}>
                   {pushResult.success ? (
@@ -262,6 +274,16 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                         Ver en Visor de Pacientes
                       </a>
                     </div>
+                  ) : pushResult.isConnectionError ? (
+                    <div>
+                      <div className="flex items-center gap-2 font-medium mb-1">
+                        <Server className="h-4 w-4" />
+                        Servidor FHIR no disponible
+                      </div>
+                      <p className="text-xs">
+                        {pushResult.message}
+                      </p>
+                    </div>
                   ) : (
                     pushResult.message
                   )}
@@ -271,12 +293,22 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                 <div className={`mt-3 rounded-lg p-3 text-sm border ${
                   validationResult.valid
                     ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : validationResult.isConnectionError
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
                     : validationResult.error
                     ? 'bg-red-50 text-red-800 border-red-200'
                     : 'bg-yellow-50 text-yellow-800 border-yellow-200'
                 }`}>
                   {validationResult.error ? (
-                    <p>{validationResult.error}</p>
+                    <div>
+                      {validationResult.isConnectionError && (
+                        <div className="flex items-center gap-2 font-medium mb-1">
+                          <Server className="h-4 w-4" />
+                          Servidor FHIR no disponible
+                        </div>
+                      )}
+                      <p className={validationResult.isConnectionError ? 'text-xs' : ''}>{validationResult.error}</p>
+                    </div>
                   ) : (
                     <>
                       <div className="flex items-center gap-2 font-medium mb-2">
