@@ -96,7 +96,8 @@ export async function POST(request: NextRequest) {
     const caseData = await CaseService.create({
       id: caseId,
       metadata: {
-        patientId: patientId || patientName,
+        patientId: patientId || undefined,
+        patientName: patientName || undefined,
         tumorType,
         reportSource: 'VCF',
         parsingConfidence: 1.0,

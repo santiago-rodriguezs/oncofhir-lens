@@ -3,6 +3,7 @@ import { z } from 'zod';
 // Base models for domain entities
 export const CaseMetadata = z.object({
   patientId: z.string().optional(),
+  patientName: z.string().optional(),
   sampleId: z.string().optional(),
   tumorType: z.string().optional(),
   reportSource: z.enum(['PDF', 'VCF']),

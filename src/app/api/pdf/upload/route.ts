@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
     const caseData = await CaseService.create({
       id: caseId,
       metadata: {
-        patientId: patientId || patientName || undefined,
+        patientId: patientId || undefined,
+        patientName: patientName || undefined,
         tumorType: tumorType || undefined,
         reportSource: 'PDF',
         parsingConfidence: 0.95,

@@ -28,6 +28,7 @@ export async function GET(
       caseId,
       patient: {
         id: caseData.metadata.patientId,
+        name: caseData.metadata.patientName,
       },
       specimen: {
         id: caseData.metadata.sampleId,
