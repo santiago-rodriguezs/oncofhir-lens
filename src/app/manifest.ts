@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'OncoFHIR Lens',
-    short_name: 'OncoFHIR',
+    name: 'OncoLens',
+    short_name: 'OncoLens',
     description: 'Genomic variant analysis for clinical decision support',
     start_url: '/',
     display: 'standalone',

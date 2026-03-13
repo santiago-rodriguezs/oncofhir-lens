@@ -16,14 +16,14 @@ export default function LoginPage() {
   }, [session, router]);
 
   if (status === 'loading') {
-    return <GeneticLoader message="OncoFHIR Lens" submessage="Authenticating..." />;
+    return <GeneticLoader message="OncoLens" submessage="Authenticating..." />;
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="max-w-md w-full space-y-8 p-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">OncoFHIR Lens</h1>
+          <h1 className="text-3xl font-bold tracking-tight">OncoLens <span className="text-sm font-normal text-muted-foreground">FHIR</span></h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Genomic variant analysis for clinical decision support
           </p>

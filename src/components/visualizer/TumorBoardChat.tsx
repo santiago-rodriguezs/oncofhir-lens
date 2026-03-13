@@ -9,7 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Variant, Evidence, Therapy } from '@/core/models';
 import type { TumorBoardMessage } from '@/lib/claude';
 import { MessageCircle, Send, Trash2 } from 'lucide-react';
+import { ApiErrorBanner } from '@/components/ApiErrorBanner';
 import { useModelStore } from '@/lib/store/model';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface TumorBoardChatProps {
   variants: Variant[];
@@ -163,7 +166,15 @@ export function TumorBoardChat({
                       : 'bg-muted'
                   }`}
                 >
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:mt-3 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-table:my-2 prose-hr:my-2">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {msg.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                  )}
                 </div>
               </div>
             ))}
@@ -182,8 +193,8 @@ export function TumorBoardChat({
 
       {/* Error */}
       {error && (
-        <div className="px-4 py-2 text-sm text-red-600 bg-red-50 border-t">
-          {error}
+        <div className="px-4 py-2 border-t">
+          <ApiErrorBanner error={error} onDismiss={() => setError(null)} />
         </div>
       )}
 

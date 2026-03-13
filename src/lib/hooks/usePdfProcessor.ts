@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+export interface PatientInfo {
+  patientName: string;
+  patientId: string;
+  tumorType: string;
+}
+
 export function usePdfProcessor() {
   const router = useRouter();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -14,7 +20,7 @@ export function usePdfProcessor() {
     }
   };
 
-  const processPdf = async () => {
+  const processPdf = async (patientInfo?: PatientInfo) => {
     if (!selectedFile) {
       setError('Por favor, seleccione un archivo PDF');
       return;
@@ -26,6 +32,9 @@ export function usePdfProcessor() {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
+      if (patientInfo?.patientName) formData.append('patientName', patientInfo.patientName);
+      if (patientInfo?.patientId) formData.append('patientId', patientInfo.patientId);
+      if (patientInfo?.tumorType) formData.append('tumorType', patientInfo.tumorType);
 
       const response = await fetch('/api/pdf/upload', {
         method: 'POST',
@@ -38,10 +47,10 @@ export function usePdfProcessor() {
       }
 
       const data = await response.json();
+      // Keep loader visible during navigation — don't setIsProcessing(false)
       router.push(`/visualizer/${data.caseId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
-    } finally {
       setIsProcessing(false);
     }
   };

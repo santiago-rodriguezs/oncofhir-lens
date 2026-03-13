@@ -90,14 +90,21 @@ export async function interpretVariants(
   context?: { tumorType?: string; stage?: string; priorTherapies?: string[] },
   model?: string
 ): Promise<ClinicalInterpretation[]> {
-  const results = await Promise.allSettled(
-    variants.map((v) => interpretVariant(v, context, model))
-  );
+  const BATCH_SIZE = 3;
+  const allResults: ClinicalInterpretation[] = [];
 
-  return results
-    .filter(
-      (r): r is PromiseFulfilledResult<ClinicalInterpretation> =>
-        r.status === 'fulfilled'
-    )
-    .map((r) => r.value);
+  for (let i = 0; i < variants.length; i += BATCH_SIZE) {
+    const batch = variants.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map((v) => interpretVariant(v, context, model))
+    );
+
+    for (const r of results) {
+      if (r.status === 'fulfilled') {
+        allResults.push(r.value);
+      }
+    }
+  }
+
+  return allResults;
 }

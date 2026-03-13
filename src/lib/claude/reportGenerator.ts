@@ -126,6 +126,7 @@ Generate a comprehensive molecular pathology report following CAP/AMP guidelines
     SYSTEM_PROMPT,
     prompt,
     'GenomicReport',
-    GenomicReportSchema
+    GenomicReportSchema,
+    { maxTokens: 16000 }
   );
 }

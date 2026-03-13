@@ -29,11 +29,12 @@ export async function sonnetJson<T>(
   system: string,
   userPrompt: string,
   schemaName: string,
-  zodSchema: z.ZodType<T>
+  zodSchema: z.ZodType<T>,
+  options?: { maxTokens?: number }
 ): Promise<T> {
   const anthropic = getAnthropic();
-  // Use the model string directly
-  
+  const maxTokens = options?.maxTokens ?? 4000;
+
   try {
     // First attempt with temperature 0.1
     const response = await anthropic.messages.create({
@@ -41,12 +42,17 @@ export async function sonnetJson<T>(
       system: system,
       messages: [{ role: 'user', content: userPrompt }],
       temperature: 0.1,
-      max_tokens: 4000,
+      max_tokens: maxTokens,
     });
     
+    if (response.stop_reason === 'max_tokens') {
+      console.warn(`${schemaName}: response truncated (max_tokens=${maxTokens})`);
+      throw new Error(`La respuesta fue truncada porque excedió el límite de ${maxTokens} tokens. Intentá con menos variantes o aumentá el límite.`);
+    }
+
     const firstBlock = response.content[0];
     let content = firstBlock.type === 'text' ? firstBlock.text : '';
-    
+
     try {
       // Clean the content from markdown formatting
       content = cleanJsonContent(content);
@@ -87,8 +93,12 @@ export async function sonnetJson<T>(
         system: `${system} IMPORTANT: You MUST respond with valid JSON only, no markdown or other text.`,
         messages: [{ role: 'user', content: userPrompt }],
         temperature: 0,
-        max_tokens: 4000,
+        max_tokens: maxTokens,
       });
+
+      if (retryResponse.stop_reason === 'max_tokens') {
+        throw new Error(`La respuesta fue truncada porque excedió el límite de ${maxTokens} tokens. Intentá con menos variantes o aumentá el límite.`);
+      }
       
       const retryBlock = retryResponse.content[0];
       let retryContent = retryBlock.type === 'text' ? retryBlock.text : '';

@@ -1,4 +1,6 @@
 import { CaseMetadata, Variant, Evidence, Therapy, QualityControl } from '@/core/models';
+import { connectDB } from '@/lib/db/mongodb';
+import { CaseModel } from '@/lib/db/models/Case';
 
 export interface Case {
   id: string;
@@ -18,53 +20,107 @@ export interface Case {
   auditEntries?: any[];
 }
 
-// Por ahora, usaremos un almacenamiento en memoria
-// Más adelante, esto se reemplazará con una base de datos real
-// Use a global variable to persist across hot reloads in development
-const globalForCases = global as typeof globalThis & {
-  cases: Map<string, Case>;
-};
+// ── In-memory fallback ─────────────────────────────────────────────────────
 
-const cases = globalForCases.cases || new Map<string, Case>();
-
+const globalForCases = global as typeof globalThis & { cases: Map<string, Case> };
+const memCases = globalForCases.cases || new Map<string, Case>();
 if (process.env.NODE_ENV !== 'production') {
-  globalForCases.cases = cases;
+  globalForCases.cases = memCases;
 }
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+function docToCase(doc: any): Case {
+  return {
+    id: doc.caseId,
+    metadata: doc.metadata,
+    variants: doc.variants,
+    evidence: doc.evidence,
+    therapies: doc.therapies,
+    qc: doc.qc,
+    annotationErrors: doc.annotationErrors,
+    extractedText: doc.extractedText,
+    highlights: doc.highlights,
+    parsingDetails: doc.parsingDetails,
+    auditEntries: doc.auditEntries,
+  };
+}
+
+async function useMongo(): Promise<boolean> {
+  try {
+    const conn = await connectDB();
+    return conn !== null;
+  } catch {
+    return false;
+  }
+}
+
+// ── Service ────────────────────────────────────────────────────────────────
 
 export const CaseService = {
   async create(caseData: Case): Promise<Case> {
-    console.log(`[CaseService] Creating case with ID: ${caseData.id}`);
-    cases.set(caseData.id, caseData);
-    console.log(`[CaseService] Total cases in memory: ${cases.size}`);
+    if (await useMongo()) {
+      const doc = await CaseModel.create({
+        caseId: caseData.id,
+        metadata: caseData.metadata,
+        variants: caseData.variants,
+        evidence: caseData.evidence,
+        therapies: caseData.therapies,
+        qc: caseData.qc,
+        annotationErrors: caseData.annotationErrors,
+        extractedText: caseData.extractedText,
+        highlights: caseData.highlights,
+        parsingDetails: caseData.parsingDetails,
+        auditEntries: caseData.auditEntries,
+      });
+      console.log(`[CaseService] Case created in MongoDB: ${caseData.id}`);
+      return docToCase(doc);
+    }
+    // Fallback: in-memory
+    memCases.set(caseData.id, caseData);
+    console.log(`[CaseService] Case created in memory: ${caseData.id} (total: ${memCases.size})`);
     return caseData;
   },
 
   async get(id: string): Promise<Case | null> {
-    console.log(`[CaseService] Getting case with ID: ${id}`);
-    console.log(`[CaseService] Total cases in memory: ${cases.size}`);
-    console.log(`[CaseService] Available case IDs: ${Array.from(cases.keys()).join(', ')}`);
-    const caseData = cases.get(id) || null;
-    console.log(`[CaseService] Case found: ${caseData ? 'Yes' : 'No'}`);
-    return caseData;
+    if (await useMongo()) {
+      const doc = await CaseModel.findOne({ caseId: id }).lean();
+      return doc ? docToCase(doc) : null;
+    }
+    return memCases.get(id) || null;
   },
 
   async list(): Promise<Case[]> {
-    return Array.from(cases.values());
+    if (await useMongo()) {
+      const docs = await CaseModel.find().sort({ createdAt: -1 }).lean();
+      return docs.map(docToCase);
+    }
+    return Array.from(memCases.values());
   },
 
   async update(id: string, data: Partial<Case>): Promise<Case | null> {
-    const existingCase = cases.get(id);
-    if (!existingCase) return null;
-
-    const updatedCase = {
-      ...existingCase,
-      ...data,
-    };
-    cases.set(id, updatedCase);
-    return updatedCase;
+    if (await useMongo()) {
+      const updateData: any = { ...data };
+      delete updateData.id;
+      const doc = await CaseModel.findOneAndUpdate(
+        { caseId: id },
+        { $set: updateData },
+        { new: true }
+      ).lean();
+      return doc ? docToCase(doc) : null;
+    }
+    const existing = memCases.get(id);
+    if (!existing) return null;
+    const updated = { ...existing, ...data };
+    memCases.set(id, updated);
+    return updated;
   },
 
   async delete(id: string): Promise<boolean> {
-    return cases.delete(id);
+    if (await useMongo()) {
+      const result = await CaseModel.deleteOne({ caseId: id });
+      return result.deletedCount > 0;
+    }
+    return memCases.delete(id);
   },
 };

@@ -1,13 +1,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+export interface PatientInfo {
+  patientName: string;
+  patientId: string;
+  tumorType: string;
+}
+
 export function useVcfProcessor() {
   const router = useRouter();
   const [vcfText, setVcfText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const processVcf = async () => {
+  const processVcf = async (patientInfo?: PatientInfo) => {
     setIsProcessing(true);
     setError(null);
 
@@ -15,7 +21,12 @@ export function useVcfProcessor() {
       const response = await fetch('/api/vcf/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vcf: vcfText }),
+        body: JSON.stringify({
+          vcf: vcfText,
+          patientName: patientInfo?.patientName,
+          patientId: patientInfo?.patientId,
+          tumorType: patientInfo?.tumorType,
+        }),
       });
 
       if (!response.ok) {
@@ -23,10 +34,10 @@ export function useVcfProcessor() {
       }
 
       const data = await response.json();
+      // Keep loader visible during navigation — don't setIsProcessing(false)
       router.push(`/visualizer/${data.caseId}`);
     } catch (err) {
       setError(`Error processing VCF: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
       setIsProcessing(false);
     }
   };

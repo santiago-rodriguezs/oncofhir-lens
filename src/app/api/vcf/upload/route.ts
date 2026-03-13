@@ -12,6 +12,9 @@ export const runtime = 'nodejs';
 // Request body schema
 const RequestSchema = z.object({
   vcf: z.string().min(1, 'VCF content is required'),
+  patientName: z.string().optional(),
+  patientId: z.string().optional(),
+  tumorType: z.string().optional(),
 });
 
 // For multipart form data with file upload
@@ -37,19 +40,23 @@ async function parseFormData(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     let vcfContent: string;
-    
+    let patientName: string | undefined;
+    let patientId: string | undefined;
+    let tumorType: string | undefined;
+
     // Check content type to determine how to parse the request
     const contentType = request.headers.get('content-type') || '';
-    
+
     if (contentType.includes('multipart/form-data')) {
-      // Handle file upload
       const formData = await parseFormData(request);
       vcfContent = formData.vcf;
     } else {
-      // Handle JSON body
       const body = await request.json();
       const validatedBody = RequestSchema.parse(body);
       vcfContent = validatedBody.vcf;
+      patientName = validatedBody.patientName;
+      patientId = validatedBody.patientId;
+      tumorType = validatedBody.tumorType;
     }
     
     console.log(`📄 Processing VCF content (${vcfContent.length} characters)`);
@@ -73,15 +80,29 @@ export async function POST(request: NextRequest) {
     const { evidence, therapies, errors: annotationErrors } = await annotateVariants(validatedVariants);
     console.log(`Generated ${evidence.length} evidence items, ${therapies.length} therapies, ${annotationErrors.length} annotation errors`);
 
+    // Enrich variants with annotation data (ClinVar significance, OncoKB level)
+    const enrichedVariants = validatedVariants.map(v => {
+      const gene = v.gene || '';
+      const oncokbEvidence = evidence.find(e => e.source === 'OncoKB' && e.evidenceId.includes(gene));
+      const clinvarEvidence = evidence.find(e => e.source === 'ClinVar' && e.evidenceId.includes(gene));
+      return {
+        ...v,
+        oncokbLevel: oncokbEvidence?.level,
+        clinvarSignificance: clinvarEvidence?.level,
+      };
+    });
+
     // Store case data
     const caseData = await CaseService.create({
       id: caseId,
       metadata: {
+        patientId: patientId || patientName,
+        tumorType,
         reportSource: 'VCF',
         parsingConfidence: 1.0,
         timestamp: new Date().toISOString(),
       },
-      variants: validatedVariants,
+      variants: enrichedVariants,
       evidence,
       therapies,
       annotationErrors: annotationErrors.length > 0 ? annotationErrors : undefined,

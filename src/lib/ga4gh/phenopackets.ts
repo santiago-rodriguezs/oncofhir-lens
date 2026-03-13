@@ -362,7 +362,7 @@ export function buildPhenopacket(input: PhenopacketInput): Phenopacket {
   // 6. MetaData
   const metaData: MetaData = {
     created: new Date().toISOString(),
-    createdBy: 'OncoFHIR Lens',
+    createdBy: 'OncoLens',
     phenopacketSchemaVersion: '2.0.0',
     resources: [
       {

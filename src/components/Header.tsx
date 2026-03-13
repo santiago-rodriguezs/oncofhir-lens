@@ -19,7 +19,8 @@ export default function Header() {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-xl font-bold text-primary-600">
-                OncoFHIR Lens
+                OncoLens
+                <span className="text-[10px] font-normal text-muted-foreground ml-1 align-super">FHIR</span>
               </Link>
             </div>
             <nav className="ml-6 flex space-x-8">
@@ -42,6 +43,16 @@ export default function Header() {
                 }`}
               >
                 Casos
+              </Link>
+              <Link
+                href="/patients"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  pathname.startsWith('/patients')
+                    ? 'border-primary-500 text-gray-900'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                Pacientes FHIR
               </Link>
               <Link
                 href="/how-it-works"

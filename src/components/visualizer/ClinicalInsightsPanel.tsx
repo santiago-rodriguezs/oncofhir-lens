@@ -17,7 +17,8 @@ import {
 } from '@/components/ui/table';
 import { Variant, Evidence, Therapy } from '@/core/models';
 import type { ClinicalInterpretation, GenomicReport } from '@/lib/claude';
-import { Brain, FileText, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { ApiErrorBanner } from '@/components/ApiErrorBanner';
 
 interface ClinicalInsightsPanelProps {
   variants: Variant[];
@@ -135,9 +136,8 @@ export function ClinicalInsightsPanel({
           </div>
         </div>
         {error && (
-          <div className="mt-3 flex items-center gap-2 text-sm text-red-600">
-            <AlertTriangle className="h-4 w-4" />
-            {error}
+          <div className="mt-3">
+            <ApiErrorBanner error={error} onDismiss={() => setError(null)} />
           </div>
         )}
       </Card>

@@ -24,11 +24,11 @@ export default function Error({
       <div className="flex space-x-4">
         <button
           onClick={() => reset()}
-          className="btn-primary"
+          className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
         >
           Intentar de nuevo
         </button>
-        <Link href="/" className="btn-secondary">
+        <Link href="/" className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors">
           Volver al Inicio
         </Link>
       </div>

@@ -18,6 +18,9 @@ export async function POST(request: NextRequest) {
     // Parse form data
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
+    const patientName = formData.get("patientName") as string | null;
+    const patientId = formData.get("patientId") as string | null;
+    const tumorType = formData.get("tumorType") as string | null;
     
     console.log("📁 File received:", file?.name, file?.type);
     
@@ -87,8 +90,10 @@ export async function POST(request: NextRequest) {
     const caseData = await CaseService.create({
       id: caseId,
       metadata: {
+        patientId: patientId || patientName || undefined,
+        tumorType: tumorType || undefined,
         reportSource: 'PDF',
-        parsingConfidence: 0.95, // PDF tiene menor confianza que VCF
+        parsingConfidence: 0.95,
         timestamp: new Date().toISOString(),
       },
       variants,

@@ -8,7 +8,17 @@ import { GeneticLoader } from '@/components/GeneticLoader';
 
 export default function Home() {
   const [workflowMode, setWorkflowMode] = useState<'pdf' | 'vcf'>('pdf');
+  const [showPatientForm, setShowPatientForm] = useState(false);
+  const [patientFirstName, setPatientFirstName] = useState('');
+  const [patientLastName, setPatientLastName] = useState('');
+  const [patientId, setPatientId] = useState('');
+  const [tumorType, setTumorType] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const patientName = [patientFirstName, patientLastName].filter(Boolean).join(' ');
+  const patientInfo = (patientName || patientId || tumorType)
+    ? { patientName, patientId, tumorType }
+    : undefined;
 
   const vcf = useVcfProcessor();
   const pdf = usePdfProcessor();
@@ -101,6 +111,64 @@ export default function Home() {
           </button>
         </div>
 
+        {/* Patient info (optional) */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowPatientForm(!showPatientForm)}
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            <svg className={`w-3.5 h-3.5 transition-transform ${showPatientForm ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+            Datos del paciente
+            <span className="text-xs text-slate-400">(opcional)</span>
+          </button>
+          {showPatientForm && (
+            <div className="mt-3 grid grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Nombre</label>
+                <input
+                  type="text"
+                  placeholder="Juan"
+                  value={patientFirstName}
+                  onChange={(e) => setPatientFirstName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-slate-400 focus:ring-1 focus:ring-slate-200 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Apellido</label>
+                <input
+                  type="text"
+                  placeholder="Pérez"
+                  value={patientLastName}
+                  onChange={(e) => setPatientLastName(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-slate-400 focus:ring-1 focus:ring-slate-200 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">DNI / ID</label>
+                <input
+                  type="text"
+                  placeholder="12345678"
+                  value={patientId}
+                  onChange={(e) => setPatientId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-slate-400 focus:ring-1 focus:ring-slate-200 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">Tipo de tumor</label>
+                <input
+                  type="text"
+                  placeholder="NSCLC, Breast, etc."
+                  value={tumorType}
+                  onChange={(e) => setTumorType(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-slate-400 focus:ring-1 focus:ring-slate-200 outline-none"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* PDF Upload */}
         {workflowMode === 'pdf' && (
           <div className="space-y-4">
@@ -156,7 +224,7 @@ export default function Home() {
 
             <button
               className="w-full py-3 px-4 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
-              onClick={pdf.processPdf}
+              onClick={() => pdf.processPdf(patientInfo)}
               disabled={isProcessing || !pdf.selectedFile}
             >
               {pdf.isProcessing ? 'Procesando...' : 'Extraer variantes y analizar'}
@@ -183,20 +251,32 @@ export default function Home() {
 
             <button
               className="w-full py-3 px-4 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all"
-              onClick={vcf.processVcf}
+              onClick={() => vcf.processVcf(patientInfo)}
               disabled={isProcessing || !vcf.vcfText.trim()}
             >
               {vcf.isProcessing ? 'Procesando...' : 'Procesar VCF'}
             </button>
 
-            <button
-              className="w-full py-2.5 px-3 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 disabled:opacity-50 transition-all"
-              onClick={vcf.loadRichExample}
-              disabled={isProcessing}
-            >
-              Cargar ejemplo oncológico
-              <span className="block text-xs text-slate-400 font-normal">21 variantes con anotaciones clínicas</span>
-            </button>
+            <div className="relative group">
+              <button
+                className="w-full py-2.5 px-3 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 disabled:opacity-50 transition-all"
+                onClick={vcf.loadRichExample}
+                disabled={isProcessing}
+              >
+                Cargar ejemplo oncológico
+                <span className="block text-xs text-slate-400 font-normal">20 variantes somáticas con datos clínicos</span>
+              </button>
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-72 p-3 bg-slate-800 text-white text-xs rounded-lg shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
+                <p className="font-semibold mb-1">VCF de ejemplo oncológico</p>
+                <ul className="space-y-0.5 text-slate-300">
+                  <li>20 variantes somáticas en genes accionables</li>
+                  <li>Genes: EGFR, TP53, PIK3CA, KRAS, BRCA1/2, ALK, PTEN, etc.</li>
+                  <li>Incluye: VAF, profundidad (DP), cambio proteico (HGVS.p), oncogenicidad y tipo de cáncer</li>
+                  <li>Coordenadas GRCh38, formato VCF 4.2</li>
+                </ul>
+                <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-slate-800" />
+              </div>
+            </div>
           </div>
         )}
 

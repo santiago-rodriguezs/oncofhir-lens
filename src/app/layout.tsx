@@ -7,7 +7,7 @@ import SessionProvider from '@/components/SessionProvider';
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'OncoFHIR Lens',
+  title: 'OncoLens',
   description: 'Genomic variant analysis for clinical decision support',
   icons: {
     icon: '/icon.svg',

@@ -21,6 +21,9 @@ Guidelines:
 - When discussing off-label use, clearly state it
 - Never provide direct patient care recommendations — frame as "considerations for tumor board discussion"
 - If asked about something outside your knowledge, say so clearly
+- Respond in Spanish
+- Use markdown formatting but keep headings small (use ### or #### instead of # or ##)
+- Keep responses focused and concise
 
 PATIENT GENOMIC DATA:
 `;

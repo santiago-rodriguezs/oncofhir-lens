@@ -15,7 +15,7 @@ export function HowItWorksPanel() {
 
         {/* ── Header ── */}
         <Card className="p-6 border-l-4 border-blue-500">
-          <h2 className="text-2xl font-bold mb-2">OncoFHIR Lens — Cómo Funciona?</h2>
+          <h2 className="text-2xl font-bold mb-2">OncoLens — Cómo Funciona?</h2>
           <p className="text-muted-foreground">
             Plataforma de análisis genómico que extrae variantes somáticas de reportes clínicos (PDF/VCF),
             las anota contra múltiples bases de conocimiento, las interpreta siguiendo guías clínicas,
@@ -448,7 +448,7 @@ const STANDARDS = [
   {
     name: 'SMART on FHIR',
     version: 'v2.1 (planificado)',
-    description: 'Framework basado en OAuth2 para apps integradas a HCE. Permitiría lanzar OncoFHIR Lens directamente desde Epic, Cerner o cualquier HCE habilitado para SMART.',
+    description: 'Framework basado en OAuth2 para apps integradas a HCE. Permitiría lanzar OncoLens directamente desde Epic, Cerner o cualquier HCE habilitado para SMART.',
     borderColor: 'border-gray-400',
     profiles: [
       'Flujo OAuth2 (/launch + /callback)',

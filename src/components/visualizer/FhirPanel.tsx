@@ -8,7 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import FhirBundleViewer from '@/components/FhirBundleViewer';
 import { Skeleton } from "@/components/ui/skeleton";
-import { Download, Copy, Check, FileJson } from "lucide-react";
+import { Download, Copy, Check, FileJson, Upload, Server } from "lucide-react";
+import { ApiErrorBanner } from '@/components/ApiErrorBanner';
 
 interface FhirPanelProps {
   caseId: string;
@@ -21,6 +22,10 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
   const [loadingPhenopacket, setLoadingPhenopacket] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [pushing, setPushing] = useState(false);
+  const [pushResult, setPushResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<any>(null);
 
   useEffect(() => {
     async function fetchBundle() {
@@ -63,6 +68,52 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
     navigator.clipboard.writeText(JSON.stringify(data, null, 2));
     setCopied(label);
     setTimeout(() => setCopied(null), 2000);
+  };
+
+  const pushToHapi = async () => {
+    setPushing(true);
+    setPushResult(null);
+    try {
+      const res = await fetch('/api/fhir/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caseId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      setPushResult({
+        success: true,
+        message: `${data.resourcesCreated} recursos enviados al servidor FHIR`,
+      });
+    } catch (err) {
+      setPushResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Error enviando al servidor FHIR',
+      });
+    } finally {
+      setPushing(false);
+    }
+  };
+
+  const validateBundle = async () => {
+    setValidating(true);
+    setValidationResult(null);
+    try {
+      const res = await fetch('/api/fhir/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ caseId }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      setValidationResult(await res.json());
+    } catch (err) {
+      setValidationResult({
+        valid: false,
+        error: err instanceof Error ? err.message : 'Error de validación',
+      });
+    } finally {
+      setValidating(false);
+    }
   };
 
   const handleDownload = (data: Record<string, unknown>, filename: string) => {
@@ -157,6 +208,32 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                     <Download className="h-4 w-4 mr-1" />
                     Descargar
                   </Button>
+                  <Button
+                    size="sm"
+                    onClick={pushToHapi}
+                    disabled={pushing}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {pushing ? (
+                      <Server className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-1" />
+                    )}
+                    {pushing ? 'Enviando...' : 'Enviar a HAPI FHIR'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={validateBundle}
+                    disabled={validating}
+                  >
+                    {validating ? (
+                      <Server className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Check className="h-4 w-4 mr-1" />
+                    )}
+                    {validating ? 'Validando...' : 'Validar $validate'}
+                  </Button>
                 </div>
               </div>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -170,6 +247,72 @@ export function FhirPanel({ caseId }: FhirPanelProps) {
                 Perfiles: genomics-report, variant, diagnostic-implication,
                 therapeutic-implication
               </p>
+              {pushResult && (
+                <div className={`mt-3 rounded-lg p-3 text-sm ${
+                  pushResult.success
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-red-50 text-red-700 border border-red-200'
+                }`}>
+                  {pushResult.success ? (
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4" />
+                      {pushResult.message}
+                      {' — '}
+                      <a href="/patients" className="underline font-medium">
+                        Ver en Visor de Pacientes
+                      </a>
+                    </div>
+                  ) : (
+                    pushResult.message
+                  )}
+                </div>
+              )}
+              {validationResult && (
+                <div className={`mt-3 rounded-lg p-3 text-sm border ${
+                  validationResult.valid
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : validationResult.error
+                    ? 'bg-red-50 text-red-800 border-red-200'
+                    : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                }`}>
+                  {validationResult.error ? (
+                    <p>{validationResult.error}</p>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 font-medium mb-2">
+                        {validationResult.valid ? (
+                          <><Check className="h-4 w-4" /> Bundle FHIR válido</>
+                        ) : (
+                          <>Bundle con observaciones</>
+                        )}
+                      </div>
+                      <div className="flex gap-3 text-xs mb-2">
+                        <span>Recursos: {validationResult.summary.totalResources}</span>
+                        <span className="text-emerald-600">Válidos: {validationResult.summary.validResources}</span>
+                        {validationResult.summary.invalidResources > 0 && (
+                          <span className="text-red-600">Con errores: {validationResult.summary.invalidResources}</span>
+                        )}
+                        {validationResult.summary.severityCounts.warning > 0 && (
+                          <span className="text-yellow-600">Warnings: {validationResult.summary.severityCounts.warning}</span>
+                        )}
+                      </div>
+                      {validationResult.results
+                        .filter((r: any) => r.issues.some((i: any) => i.severity === 'error'))
+                        .slice(0, 5)
+                        .map((r: any, idx: number) => (
+                          <div key={idx} className="text-xs mt-1 border-t pt-1">
+                            <span className="font-medium">{r.resourceType}</span>
+                            {r.issues
+                              .filter((i: any) => i.severity === 'error')
+                              .map((i: any, j: number) => (
+                                <p key={j} className="text-red-600 ml-2">{i.diagnostics}</p>
+                              ))}
+                          </div>
+                        ))}
+                    </>
+                  )}
+                </div>
+              )}
             </Card>
             <FhirBundleViewer bundle={bundle as any} />
           </div>

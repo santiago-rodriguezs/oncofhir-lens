@@ -60,25 +60,41 @@ export function parseVcfToVariants(vcfText: string): VariantInput[] {
         // Keep track of raw variants before validation
         rawVariants.push({...variant});
         
-        // Extract gene from INFO field if available
+        // Extract fields from INFO
         if (info) {
-          // Parse INFO field
           const infoFields = info.split(';');
-          
+          const infoMap: Record<string, string> = {};
+
           for (const field of infoFields) {
-            // Look for GENE= or gene= field
-            if (field.toUpperCase().startsWith('GENE=')) {
-              variant.gene = field.split('=')[1];
+            if (field.includes('=')) {
+              const [key, value] = field.split('=');
+              infoMap[key.toUpperCase()] = value;
             }
-            
-            // Look for AF= field for variant allele frequency
-            // Note: For multi-allelic sites, this might be the combined AF or the AF of the first alt
-            if (field.toUpperCase().startsWith('AF=')) {
-              const afValue = parseFloat(field.split('=')[1]);
-              if (!isNaN(afValue)) {
-                variant.vaf = afValue;
-              }
-            }
+          }
+
+          // Gene
+          if (infoMap.GENE) variant.gene = infoMap.GENE;
+
+          // HGVS from PROTEIN, HGVS, or HGVSC
+          if (infoMap.PROTEIN) variant.hgvs_p = infoMap.PROTEIN;
+          if (infoMap.HGVS) variant.hgvs = infoMap.HGVS;
+          if (infoMap.HGVSC) variant.hgvs_c = infoMap.HGVSC;
+
+          // Effect from ONCOGENIC or EFFECT
+          if (infoMap.ONCOGENIC) variant.effect = infoMap.ONCOGENIC.replace(/_/g, ' ');
+          else if (infoMap.EFFECT) variant.effect = infoMap.EFFECT;
+
+          // Depth from DP
+          if (infoMap.DP) {
+            const d = parseInt(infoMap.DP);
+            if (!isNaN(d)) variant.depth = d;
+          }
+
+          // VAF from VAF or AF
+          const vafStr = infoMap.VAF || infoMap.AF;
+          if (vafStr) {
+            const v = parseFloat(vafStr);
+            if (!isNaN(v)) variant.vaf = v;
           }
         }
         
@@ -114,6 +130,11 @@ export function parseVcfToVariants(vcfText: string): VariantInput[] {
           }
         }
         
+        // Set hgvs from hgvs_p or hgvs_c for display
+        if (!variant.hgvs) {
+          variant.hgvs = variant.hgvs_p || variant.hgvs_c;
+        }
+
         // Add variant to the list
         variants.push(variant);
       }

@@ -8,6 +8,9 @@ export const VariantSchema = z.object({
   alt: z.string(),
   gene: z.string().optional(),
   vaf: z.number().optional(),
+  depth: z.number().optional(),
+  effect: z.string().optional(),
+  hgvs: z.string().optional(),
   hgvs_c: z.string().optional(),
   hgvs_p: z.string().optional(),
 });

@@ -155,11 +155,12 @@ function convertToVariant(vcfLine: VcfLine): Variant {
     hgvs = vcfLine.info.HGVS;
   } else if (vcfLine.info.HGVSC) {
     hgvs = vcfLine.info.HGVSC;
+  } else if (vcfLine.info.PROTEIN) {
+    hgvs = vcfLine.info.PROTEIN;
   } else if (vcfLine.info.ANN) {
-    // Try to extract from Snpeff ANN field
     const annParts = vcfLine.info.ANN.split('|');
     if (annParts.length > 9) {
-      hgvs = annParts[9]; // HGVS.c notation in SnpEff
+      hgvs = annParts[9];
     }
   }
   
@@ -169,32 +170,46 @@ function convertToVariant(vcfLine: VcfLine): Variant {
     consequence = vcfLine.info.EFFECT;
   } else if (vcfLine.info.CONSEQUENCE) {
     consequence = vcfLine.info.CONSEQUENCE;
+  } else if (vcfLine.info.ONCOGENIC) {
+    consequence = vcfLine.info.ONCOGENIC;
   } else if (vcfLine.info.ANN) {
-    // Extract from Snpeff ANN field
     const annParts = vcfLine.info.ANN.split('|');
     if (annParts.length > 1) {
       consequence = annParts[1];
     }
   } else if (vcfLine.info.CSQ) {
-    // Extract from VEP CSQ field
     const csqParts = vcfLine.info.CSQ.split('|');
     if (csqParts.length > 1) {
       consequence = csqParts[1];
     }
   }
   
-  // Calculate VAF (Variant Allele Frequency) if AD (Allele Depth) is available
+  // Calculate VAF and depth from samples or INFO field
   let vaf: number | undefined = undefined;
-  
+  let depth: number | undefined = undefined;
+
+  // Try INFO field first (some VCFs put VAF/DP directly in INFO)
+  if (vcfLine.info.VAF) {
+    const v = parseFloat(vcfLine.info.VAF);
+    if (!isNaN(v)) vaf = v;
+  }
+  if (vcfLine.info.DP) {
+    const d = parseInt(vcfLine.info.DP);
+    if (!isNaN(d)) depth = d;
+  }
+
+  // Then try sample-level data (overrides INFO if present)
   if (vcfLine.samples && Object.keys(vcfLine.samples).length > 0) {
     const firstSample = vcfLine.samples[Object.keys(vcfLine.samples)[0]];
 
-    // Try explicit VAF field first
     if (firstSample.VAF) {
       const vafValue = parseFloat(firstSample.VAF);
-      if (!isNaN(vafValue)) {
-        vaf = vafValue;
-      }
+      if (!isNaN(vafValue)) vaf = vafValue;
+    }
+
+    if (firstSample.DP) {
+      const dpValue = parseInt(firstSample.DP);
+      if (!isNaN(dpValue)) depth = dpValue;
     }
 
     // Fall back to calculating from AD (allele depth)
@@ -205,11 +220,12 @@ function convertToVariant(vcfLine: VcfLine): Variant {
         const totalDepth = depths.reduce((sum, depth) => sum + depth, 0);
         if (totalDepth > 0) {
           vaf = altDepth / totalDepth;
+          if (depth === undefined) depth = totalDepth;
         }
       }
     }
   }
-  
+
   // Create the variant object
   return {
     id: uuidv4(),
@@ -221,6 +237,7 @@ function convertToVariant(vcfLine: VcfLine): Variant {
     alt: vcfLine.alt,
     effect: consequence,
     vaf,
+    depth,
     quality: vcfLine.qual,
     filter: vcfLine.filter,
   };

@@ -13,7 +13,7 @@ export function PitchPanel() {
         <div className="text-center py-8">
           <h1 className="text-4xl font-extrabold tracking-tight mb-3">
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent">
-              OncoFHIR Lens
+              OncoLens
             </span>
           </h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -226,7 +226,7 @@ export function PitchPanel() {
         <Card className="p-6">
           <h3 className="text-xl font-bold mb-2 text-center">Estándares Clínicos Implementados</h3>
           <p className="text-sm text-muted-foreground text-center mb-6">
-            OncoFHIR Lens es pionero en combinar estos estándares en una sola herramienta
+            OncoLens es pionero en combinar estos estándares en una sola herramienta
           </p>
           <div className="flex flex-col items-center gap-0">
             {/* Variant Representation */}
@@ -317,7 +317,7 @@ export function PitchPanel() {
                 <tr className="border-b-2">
                   <th className="text-left py-3 pr-4 font-bold">Aspecto</th>
                   <th className="text-left py-3 pr-4 font-bold text-red-600">Flujo Manual</th>
-                  <th className="text-left py-3 font-bold text-green-600">OncoFHIR Lens</th>
+                  <th className="text-left py-3 font-bold text-green-600">OncoLens</th>
                 </tr>
               </thead>
               <tbody>
@@ -356,7 +356,7 @@ export function PitchPanel() {
 
         {/* ── Footer ── */}
         <div className="text-center py-4 text-sm text-muted-foreground">
-          <p className="font-semibold">OncoFHIR Lens</p>
+          <p className="font-semibold">OncoLens</p>
           <p>Tesis de grado — Licenciatura en Bioinformática</p>
           <p className="mt-1">Santiago Rodriguez Salinas</p>
         </div>
