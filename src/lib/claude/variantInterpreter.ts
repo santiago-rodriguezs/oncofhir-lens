@@ -26,16 +26,19 @@ For each variant you MUST:
 7. Cite sources (OncoKB, ClinVar, NCCN, FDA labels, published literature)
 
 Always be precise about uncertainty. Never overstate evidence.
-Respond ONLY with valid JSON, no markdown formatting.`;
+Respond ONLY with valid JSON array, no markdown formatting.`;
 
 /**
- * Interpret a single variant using Claude for clinical classification
+ * Interpret ALL variants in a single Claude call (batch).
+ * Much faster than one call per variant.
  */
-export async function interpretVariant(
-  variant: Variant,
+export async function interpretVariants(
+  variants: Variant[],
   context?: { tumorType?: string; stage?: string; priorTherapies?: string[] },
   model?: string
-): Promise<ClinicalInterpretation> {
+): Promise<ClinicalInterpretation[]> {
+  if (variants.length === 0) return [];
+
   const contextSection = context
     ? `\nClinical context:
   - Tumor type: ${context.tumorType || 'Not specified'}
@@ -43,68 +46,57 @@ export async function interpretVariant(
   - Prior therapies: ${context.priorTherapies?.join(', ') || 'None reported'}`
     : '';
 
-  const annotationSection = [
-    variant.oncokbData
-      ? `OncoKB: oncogenic=${variant.oncokbData.oncogenic}, mutationEffect=${variant.oncokbData.mutationEffect || 'N/A'}, sensitiveLevel=${variant.oncokbData.highestSensitiveLevel || 'N/A'}`
-      : null,
-    variant.clinvarData
-      ? `ClinVar: significance=${variant.clinvarData.clinicalSignificance}, reviewStatus=${variant.clinvarData.reviewStatus || 'N/A'}`
-      : null,
-    variant.clinvarSignificance
-      ? `ClinVar significance: ${variant.clinvarSignificance}`
-      : null,
-    variant.oncokbLevel
-      ? `OncoKB level: ${variant.oncokbLevel}`
-      : null,
-  ]
-    .filter(Boolean)
-    .join('\n  ');
+  const variantDescriptions = variants.map((v, i) => {
+    const annotations = [
+      v.oncokbData
+        ? `OncoKB: oncogenic=${v.oncokbData.oncogenic}, mutationEffect=${v.oncokbData.mutationEffect || 'N/A'}, sensitiveLevel=${v.oncokbData.highestSensitiveLevel || 'N/A'}`
+        : null,
+      v.oncokbLevel ? `OncoKB level: ${v.oncokbLevel}` : null,
+      v.clinvarData
+        ? `ClinVar: significance=${v.clinvarData.clinicalSignificance}, reviewStatus=${v.clinvarData.reviewStatus || 'N/A'}`
+        : null,
+      v.clinvarSignificance ? `ClinVar significance: ${v.clinvarSignificance}` : null,
+      v.gnomadAF != null ? `gnomAD AF: ${(v.gnomadAF * 100).toFixed(3)}%` : null,
+      v.cosmicId ? `COSMIC: ${v.cosmicId}` : null,
+    ].filter(Boolean).join('; ');
 
-  const prompt = `Interpret this somatic variant:
+    return `[Variant ${i + 1}]
+Gene: ${v.gene || 'Unknown'}
+HGVS: ${v.hgvs || v.hgvs_p || v.hgvs_c || 'N/A'}
+Chr${v.chrom || '?'}:${v.pos || '?'} ${v.ref || '?'}>${v.alt || '?'}
+Effect: ${v.effect || 'Unknown'}
+VAF: ${v.vaf !== undefined ? (v.vaf * 100).toFixed(1) + '%' : 'N/A'}
+${annotations ? `Annotations: ${annotations}` : ''}`;
+  }).join('\n\n');
 
-Gene: ${variant.gene || 'Unknown'}
-Chromosome: ${variant.chrom || 'Unknown'} Position: ${variant.pos || 'Unknown'}
-Ref: ${variant.ref || 'N/A'} → Alt: ${variant.alt || 'N/A'}
-HGVS: ${variant.hgvs || variant.hgvs_c || variant.hgvs_p || 'N/A'}
-Effect: ${variant.effect || 'Unknown'}
-VAF: ${variant.vaf !== undefined ? (variant.vaf * 100).toFixed(1) + '%' : 'N/A'}
-${annotationSection ? `\nExisting annotations:\n  ${annotationSection}` : ''}
+  const prompt = `Interpret ALL ${variants.length} somatic variants below and return a JSON array with one interpretation object per variant, in the same order.
 ${contextSection}
 
-Provide AMP/ASCO/CAP tier classification, actionability assessment, therapeutic implications with evidence levels, and relevant clinical trials.`;
+${variantDescriptions}
 
-  return sonnetJson<ClinicalInterpretation>(
+Return a JSON array of ${variants.length} interpretation objects. Each must have: gene, variant, tier, tierRationale, classification, actionability, therapeuticImplications, confidence, reasoning, sources. Optional: clinicalTrials, prognosticImplications, diagnosticImplications.`;
+
+  return sonnetJson<ClinicalInterpretation[]>(
     getClaudeModel(model),
     SYSTEM_PROMPT,
     prompt,
-    'ClinicalInterpretation',
-    ClinicalInterpretationSchema
+    'ClinicalInterpretations',
+    z.array(ClinicalInterpretationSchema),
+    { maxTokens: 16000 }
   );
 }
 
 /**
- * Interpret multiple variants in batch
+ * Interpret a single variant (convenience wrapper)
  */
-export async function interpretVariants(
-  variants: Variant[],
+export async function interpretVariant(
+  variant: Variant,
   context?: { tumorType?: string; stage?: string; priorTherapies?: string[] },
   model?: string
-): Promise<ClinicalInterpretation[]> {
-  const BATCH_SIZE = 3;
-  const allResults: ClinicalInterpretation[] = [];
-
-  for (let i = 0; i < variants.length; i += BATCH_SIZE) {
-    const batch = variants.slice(i, i + BATCH_SIZE);
-    const results = await Promise.allSettled(
-      batch.map((v) => interpretVariant(v, context, model))
-    );
-
-    for (const r of results) {
-      if (r.status === 'fulfilled') {
-        allResults.push(r.value);
-      }
-    }
+): Promise<ClinicalInterpretation> {
+  const results = await interpretVariants([variant], context, model);
+  if (results.length === 0) {
+    throw new Error('No interpretation returned');
   }
-
-  return allResults;
+  return results[0];
 }

@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useModelStore } from '@/lib/store/model';
 import {
@@ -17,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Variant, Evidence, Therapy } from '@/core/models';
 import type { ClinicalInterpretation, GenomicReport } from '@/lib/claude';
-import { Brain, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Brain, FileText, ChevronDown, ChevronUp, Loader2, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import { ApiErrorBanner } from '@/components/ApiErrorBanner';
 
 interface ClinicalInsightsPanelProps {
@@ -41,6 +40,55 @@ const ACTIONABILITY_COLORS: Record<string, string> = {
   None: 'bg-gray-100 text-gray-800',
 };
 
+// ── Deep Research Style Loading ──
+interface LoadingStep {
+  id: string;
+  label: string;
+  status: 'pending' | 'active' | 'done';
+}
+
+function DeepResearchLoader({ steps, elapsedSeconds, title }: { steps: LoadingStep[]; elapsedSeconds: number; title: string }) {
+  return (
+    <Card className="p-6 border-purple-200 bg-gradient-to-br from-purple-50/50 to-white">
+      <div className="flex items-start gap-4">
+        <div className="relative">
+          <Brain className="h-8 w-8 text-purple-600" />
+          <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-purple-500 rounded-full animate-pulse" />
+        </div>
+        <div className="flex-1 space-y-4">
+          <div>
+            <h3 className="font-semibold text-purple-900">{title}</h3>
+            <p className="text-sm text-purple-600 mt-0.5">
+              Clasificación AMP/ASCO/CAP con evidencia clínica
+              <span className="ml-2 text-purple-400">{elapsedSeconds}s</span>
+            </p>
+          </div>
+          <div className="space-y-2">
+            {steps.map((step) => (
+              <div key={step.id} className="flex items-center gap-2.5">
+                {step.status === 'done' ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                ) : step.status === 'active' ? (
+                  <Loader2 className="h-4 w-4 text-purple-500 animate-spin shrink-0" />
+                ) : (
+                  <Clock className="h-4 w-4 text-slate-300 shrink-0" />
+                )}
+                <span className={`text-sm ${
+                  step.status === 'done' ? 'text-emerald-700' :
+                  step.status === 'active' ? 'text-purple-700 font-medium' :
+                  'text-slate-400'
+                }`}>
+                  {step.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function ClinicalInsightsPanel({
   variants,
   evidence,
@@ -48,17 +96,104 @@ export function ClinicalInsightsPanel({
   tumorType,
 }: ClinicalInsightsPanelProps) {
   const { model } = useModelStore();
-  const [interpretations, setInterpretations] = useState<ClinicalInterpretation[]>([]);
+  const [interpretations, setInterpretations] = useState<Map<number, ClinicalInterpretation>>(new Map());
   const [report, setReport] = useState<GenomicReport | null>(null);
-  const [loadingInterpret, setLoadingInterpret] = useState(false);
+  const [loadingVariantIdx, setLoadingVariantIdx] = useState<number | null>(null);
+  const [loadingAllVariants, setLoadingAllVariants] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedVariant, setExpandedVariant] = useState<number | null>(null);
 
-  const handleInterpret = async () => {
-    setLoadingInterpret(true);
+  // Loading steps state
+  const [loadingSteps, setLoadingSteps] = useState<LoadingStep[]>([]);
+  const [loadingTitle, setLoadingTitle] = useState('');
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
+
+  const isLoading = loadingVariantIdx !== null || loadingAllVariants || loadingReport;
+
+  // Timer
+  useEffect(() => {
+    if (isLoading) {
+      setElapsedSeconds(0);
+      timerRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [isLoading]);
+
+  // Interpret a SINGLE variant (cheap, ~$0.002)
+  const handleInterpretOne = async (idx: number) => {
+    setLoadingVariantIdx(idx);
     setError(null);
+    setExpandedVariant(idx);
+
+    const v = variants[idx];
+    setLoadingTitle(`Interpretando ${v.gene || 'variante'}...`);
+    setLoadingSteps([
+      { id: 'analyze', label: `Analizando ${v.gene} ${v.hgvs_p || v.hgvs_c || ''}...`, status: 'active' },
+      { id: 'classify', label: 'Clasificación AMP Tier...', status: 'pending' },
+      { id: 'done', label: 'Validando interpretación...', status: 'pending' },
+    ]);
+
     try {
+      setTimeout(() => setLoadingSteps((prev) =>
+        prev.map((s, i) => ({ ...s, status: i < 1 ? 'done' : i === 1 ? 'active' : 'pending' } as LoadingStep))
+      ), 2000);
+      setTimeout(() => setLoadingSteps((prev) =>
+        prev.map((s, i) => ({ ...s, status: i < 2 ? 'done' : i === 2 ? 'active' : 'pending' } as LoadingStep))
+      ), 5000);
+
+      const res = await fetch('/api/claude/interpret', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
+        body: JSON.stringify({
+          variants: [v],
+          context: tumorType ? { tumorType } : undefined,
+        }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+
+      if (data.interpretations?.length > 0) {
+        setInterpretations((prev) => new Map(prev).set(idx, data.interpretations[0]));
+      }
+
+      setLoadingSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as const })));
+      await new Promise((r) => setTimeout(r, 300));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al interpretar');
+    } finally {
+      setLoadingVariantIdx(null);
+      setLoadingSteps([]);
+    }
+  };
+
+  // Interpret ALL variants in batch (more expensive, optional)
+  const handleInterpretAll = async () => {
+    setLoadingAllVariants(true);
+    setError(null);
+
+    setLoadingTitle(`Interpretando ${variants.length} variantes...`);
+    setLoadingSteps([
+      { id: 'prep', label: `Preparando ${variants.length} variantes con anotaciones...`, status: 'active' },
+      { id: 'classify', label: 'Clasificación AMP/ASCO/CAP (Tier I-IV)...', status: 'pending' },
+      { id: 'therapy', label: 'Evaluando implicancias terapéuticas...', status: 'pending' },
+      { id: 'validate', label: 'Validando interpretaciones...', status: 'pending' },
+    ]);
+
+    const advanceStep = (idx: number) => {
+      setLoadingSteps((prev) =>
+        prev.map((s, i) => ({ ...s, status: i < idx ? 'done' : i === idx ? 'active' : 'pending' } as LoadingStep))
+      );
+    };
+
+    try {
+      setTimeout(() => advanceStep(1), 2000);
+      setTimeout(() => advanceStep(2), 8000);
+      setTimeout(() => advanceStep(3), 15000);
+
       const res = await fetch('/api/claude/interpret', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
@@ -69,18 +204,48 @@ export function ClinicalInsightsPanel({
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
-      setInterpretations(data.interpretations);
+
+      const newMap = new Map<number, ClinicalInterpretation>();
+      (data.interpretations || []).forEach((interp: ClinicalInterpretation, i: number) => {
+        newMap.set(i, interp);
+      });
+      setInterpretations(newMap);
+
+      setLoadingSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as const })));
+      await new Promise((r) => setTimeout(r, 500));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al interpretar variantes');
     } finally {
-      setLoadingInterpret(false);
+      setLoadingAllVariants(false);
+      setLoadingSteps([]);
     }
   };
 
   const handleGenerateReport = async () => {
     setLoadingReport(true);
     setError(null);
+
+    setLoadingTitle('Generando reporte de patología molecular...');
+    setLoadingSteps([
+      { id: 'compile', label: 'Compilando variantes, evidencia y terapias...', status: 'active' },
+      { id: 'exec', label: 'Generando resumen ejecutivo...', status: 'pending' },
+      { id: 'fda', label: 'Evaluando terapias FDA/NCCN...', status: 'pending' },
+      { id: 'format', label: 'Estructurando reporte CAP/AMP...', status: 'pending' },
+    ]);
+
+    const advanceStep = (idx: number) => {
+      setLoadingSteps((prev) =>
+        prev.map((s, i) => ({ ...s, status: i < idx ? 'done' : i === idx ? 'active' : 'pending' } as LoadingStep))
+      );
+    };
+
     try {
+      setTimeout(() => advanceStep(1), 3000);
+      setTimeout(() => advanceStep(2), 8000);
+      setTimeout(() => advanceStep(3), 14000);
+
+      const allInterps = Array.from(interpretations.values());
+
       const res = await fetch('/api/claude/report', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
@@ -88,28 +253,32 @@ export function ClinicalInsightsPanel({
           variants,
           evidence,
           therapies,
-          interpretations: interpretations.length > 0 ? interpretations : undefined,
-          context: {
-            tumorType,
-            reportSource: 'NGS Panel',
-          },
+          interpretations: allInterps.length > 0 ? allInterps : undefined,
+          context: { tumorType, reportSource: 'NGS Panel' },
         }),
       });
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
+
+      setLoadingSteps((prev) => prev.map((s) => ({ ...s, status: 'done' as const })));
+      await new Promise((r) => setTimeout(r, 500));
       setReport(data.report);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al generar reporte');
     } finally {
       setLoadingReport(false);
+      setLoadingSteps([]);
     }
   };
+
+  const interpretedCount = interpretations.size;
+  const allInterpreted = interpretedCount === variants.length;
 
   return (
     <div className="space-y-6">
       {/* Action buttons */}
       <Card className="p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-purple-600" />
             <h3 className="text-lg font-semibold">Claude Insights Clínicos</h3>
@@ -117,17 +286,26 @@ export function ClinicalInsightsPanel({
               Powered by Claude Sonnet / Opus 4.6
             </Badge>
           </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={handleInterpret}
-              disabled={loadingInterpret || variants.length === 0}
-              variant="default"
-            >
-              {loadingInterpret ? 'Interpretando...' : 'Interpretar Variantes'}
-            </Button>
+          <div className="flex gap-2 items-center">
+            {interpretedCount > 0 && (
+              <span className="text-xs text-muted-foreground">
+                {interpretedCount}/{variants.length} interpretadas
+              </span>
+            )}
+            {!allInterpreted && (
+              <Button
+                onClick={handleInterpretAll}
+                disabled={isLoading || variants.length === 0}
+                variant="outline"
+                size="sm"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                Interpretar Todas ({variants.length})
+              </Button>
+            )}
             <Button
               onClick={handleGenerateReport}
-              disabled={loadingReport || variants.length === 0}
+              disabled={isLoading || variants.length === 0}
               variant="outline"
             >
               <FileText className="h-4 w-4 mr-2" />
@@ -142,224 +320,189 @@ export function ClinicalInsightsPanel({
         )}
       </Card>
 
-      {/* Loading states */}
-      {(loadingInterpret || loadingReport) && (
-        <Card className="p-6">
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-20 w-full" />
-            <Skeleton className="h-4 w-2/3" />
-          </div>
-        </Card>
+      {/* Deep research loading */}
+      {isLoading && loadingSteps.length > 0 && (
+        <DeepResearchLoader steps={loadingSteps} elapsedSeconds={elapsedSeconds} title={loadingTitle} />
       )}
 
-      {/* Interpretations */}
-      {interpretations.length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            Interpretaciones de Variantes (AMP/ASCO/CAP)
-          </h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Gen</TableHead>
-                <TableHead>Variante</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Clasificación</TableHead>
-                <TableHead>Accionabilidad</TableHead>
-                <TableHead>Confianza</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {interpretations.map((interp, idx) => (
+      {/* Variants table — each row has an "Interpretar" button */}
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">
+          Variantes Detectadas
+          {interpretedCount > 0 && (
+            <Badge variant="secondary" className="ml-2 text-xs">
+              {interpretedCount} interpretada{interpretedCount !== 1 ? 's' : ''}
+            </Badge>
+          )}
+        </h3>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Gen</TableHead>
+              <TableHead>Variante</TableHead>
+              <TableHead>Tier</TableHead>
+              <TableHead>Clasificación</TableHead>
+              <TableHead>Accionabilidad</TableHead>
+              <TableHead></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {variants.map((v, idx) => {
+              const interp = interpretations.get(idx);
+              const isExpanded = expandedVariant === idx;
+              const isLoadingThis = loadingVariantIdx === idx;
+
+              return (
                 <>
                   <TableRow
                     key={idx}
-                    className="cursor-pointer hover:bg-muted"
-                    onClick={() =>
-                      setExpandedVariant(expandedVariant === idx ? null : idx)
-                    }
+                    className={`${interp ? 'cursor-pointer hover:bg-muted' : ''}`}
+                    onClick={() => interp && setExpandedVariant(isExpanded ? null : idx)}
                   >
-                    <TableCell className="font-medium">{interp.gene}</TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {interp.variant}
+                    <TableCell className="font-medium text-blue-700">
+                      {v.gene || '-'}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {v.hgvs_p || v.hgvs_c || v.hgvs || '-'}
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={TIER_COLORS[interp.tier] || ''}
-                      >
-                        {interp.tier}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{interp.classification}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          ACTIONABILITY_COLORS[interp.actionability] || ''
-                        }
-                      >
-                        {interp.actionability}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{interp.confidence}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {expandedVariant === idx ? (
-                        <ChevronUp className="h-4 w-4" />
+                      {interp ? (
+                        <Badge variant="outline" className={TIER_COLORS[interp.tier] || ''}>
+                          {interp.tier}
+                        </Badge>
                       ) : (
-                        <ChevronDown className="h-4 w-4" />
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {interp ? (
+                        <span className="text-sm">{interp.classification}</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {interp ? (
+                        <Badge variant="outline" className={ACTIONABILITY_COLORS[interp.actionability] || ''}>
+                          {interp.actionability}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {interp ? (
+                        isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-purple-600 hover:text-purple-800 hover:bg-purple-50 text-xs"
+                          disabled={isLoading}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleInterpretOne(idx);
+                          }}
+                        >
+                          {isLoadingThis ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <Brain className="h-3.5 w-3.5 mr-1" />
+                              Interpretar
+                            </>
+                          )}
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>
-                  {expandedVariant === idx && (
+                  {isExpanded && interp && (
                     <TableRow key={`${idx}-detail`}>
-                      <TableCell colSpan={7} className="bg-muted/50">
+                      <TableCell colSpan={6} className="bg-muted/50">
                         <div className="space-y-4 p-4">
-                          {/* Tier rationale */}
                           <div>
-                            <h4 className="text-sm font-semibold mb-1">
-                              Justificación del Tier
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {interp.tierRationale}
-                            </p>
+                            <h4 className="text-sm font-semibold mb-1">Justificación del Tier</h4>
+                            <p className="text-sm text-muted-foreground">{interp.tierRationale}</p>
                           </div>
-
-                          {/* Reasoning */}
                           <div>
-                            <h4 className="text-sm font-semibold mb-1">
-                              Razonamiento Clínico
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {interp.reasoning}
-                            </p>
+                            <h4 className="text-sm font-semibold mb-1">Razonamiento Clínico</h4>
+                            <p className="text-sm text-muted-foreground">{interp.reasoning}</p>
                           </div>
-
-                          {/* Therapeutic implications */}
                           {interp.therapeuticImplications.length > 0 && (
                             <div>
-                              <h4 className="text-sm font-semibold mb-2">
-                                Implicancias Terapéuticas
-                              </h4>
+                              <h4 className="text-sm font-semibold mb-2">Implicancias Terapéuticas</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {interp.therapeuticImplications.map(
-                                  (ti, tiIdx) => (
-                                    <Card
-                                      key={tiIdx}
-                                      className="p-3 text-sm"
-                                    >
-                                      <div className="font-medium">
-                                        {ti.drug}
-                                      </div>
-                                      <div className="text-muted-foreground">
-                                        {ti.approvalContext}
-                                      </div>
-                                      <div className="flex gap-1 mt-1 flex-wrap">
-                                        <Badge variant="outline" className="text-xs">
-                                          {ti.evidenceLevel}
-                                        </Badge>
-                                        {ti.tumorTypes.map((tt) => (
-                                          <Badge
-                                            key={tt}
-                                            variant="secondary"
-                                            className="text-xs"
-                                          >
-                                            {tt}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    </Card>
-                                  )
-                                )}
+                                {interp.therapeuticImplications.map((ti, tiIdx) => (
+                                  <Card key={tiIdx} className="p-3 text-sm">
+                                    <div className="font-medium">{ti.drug}</div>
+                                    <div className="text-muted-foreground">{ti.approvalContext}</div>
+                                    <div className="flex gap-1 mt-1 flex-wrap">
+                                      <Badge variant="outline" className="text-xs">{ti.evidenceLevel}</Badge>
+                                      {ti.tumorTypes.map((tt) => (
+                                        <Badge key={tt} variant="secondary" className="text-xs">{tt}</Badge>
+                                      ))}
+                                    </div>
+                                  </Card>
+                                ))}
                               </div>
                             </div>
                           )}
-
-                          {/* Clinical trials */}
-                          {interp.clinicalTrials &&
-                            interp.clinicalTrials.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-semibold mb-1">
-                                  Ensayos Clínicos Relevantes
-                                </h4>
-                                <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                  {interp.clinicalTrials.map((ct, ctIdx) => (
-                                    <li key={ctIdx}>
-                                      {ct.description}
-                                      {ct.phase && ` (${ct.phase})`}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                          {/* Prognostic/Diagnostic */}
-                          {interp.prognosticImplications && (
+                          {interp.clinicalTrials && interp.clinicalTrials.length > 0 && (
                             <div>
-                              <h4 className="text-sm font-semibold mb-1">
-                                Implicancias Pronósticas
-                              </h4>
-                              <p className="text-sm text-muted-foreground">
-                                {interp.prognosticImplications}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Sources */}
-                          {interp.sources.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-semibold mb-1">
-                                Fuentes
-                              </h4>
+                              <h4 className="text-sm font-semibold mb-1">Ensayos Clínicos Relevantes</h4>
                               <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                {interp.sources.map((s, sIdx) => (
-                                  <li key={sIdx}>{s}</li>
+                                {interp.clinicalTrials.map((ct, ctIdx) => (
+                                  <li key={ctIdx}>{ct.description}{ct.phase && ` (${ct.phase})`}</li>
                                 ))}
                               </ul>
                             </div>
                           )}
+                          {interp.prognosticImplications && (
+                            <div>
+                              <h4 className="text-sm font-semibold mb-1">Implicancias Pronósticas</h4>
+                              <p className="text-sm text-muted-foreground">{interp.prognosticImplications}</p>
+                            </div>
+                          )}
+                          {interp.sources.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-semibold mb-1">Fuentes</h4>
+                              <ul className="list-disc list-inside text-sm text-muted-foreground">
+                                {interp.sources.map((s, sIdx) => (<li key={sIdx}>{s}</li>))}
+                              </ul>
+                            </div>
+                          )}
+                          <div className="flex justify-end">
+                            <Badge variant="secondary" className="text-xs">
+                              Confianza: {interp.confidence}
+                            </Badge>
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>
                   )}
                 </>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+              );
+            })}
+          </TableBody>
+        </Table>
+      </Card>
 
       {/* Generated Report */}
       {report && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">
-              Reporte de Patología Molecular
-            </h3>
+            <h3 className="text-lg font-semibold">Reporte de Patología Molecular</h3>
             <Badge variant="outline">Generado por IA</Badge>
           </div>
           <ScrollArea className="max-h-[600px]">
             <div className="space-y-6 pr-4">
-              {/* Executive Summary */}
               <section>
-                <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                  Resumen Ejecutivo
-                </h4>
-                <p className="text-sm leading-relaxed">
-                  {report.executiveSummary}
-                </p>
+                <h4 className="text-md font-semibold border-b pb-2 mb-2">Resumen Ejecutivo</h4>
+                <p className="text-sm leading-relaxed">{report.executiveSummary}</p>
               </section>
 
-              {/* Variant Classifications */}
               <section>
-                <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                  Clasificación de Variantes
-                </h4>
+                <h4 className="text-md font-semibold border-b pb-2 mb-2">Clasificación de Variantes</h4>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -373,156 +516,95 @@ export function ClinicalInsightsPanel({
                   <TableBody>
                     {report.variantClassifications.map((vc, idx) => (
                       <TableRow key={idx}>
-                        <TableCell className="font-medium">
-                          {vc.gene}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {vc.variant}
-                        </TableCell>
+                        <TableCell className="font-medium">{vc.gene}</TableCell>
+                        <TableCell className="font-mono text-sm">{vc.variant}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={TIER_COLORS[vc.tier] || ''}
-                          >
-                            {vc.tier}
-                          </Badge>
+                          <Badge variant="outline" className={TIER_COLORS[vc.tier] || ''}>{vc.tier}</Badge>
                         </TableCell>
                         <TableCell>{vc.classification}</TableCell>
-                        <TableCell className="text-sm">
-                          {vc.clinicalSignificance}
-                        </TableCell>
+                        <TableCell className="text-sm">{vc.clinicalSignificance}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </section>
 
-              {/* FDA-Approved Therapies */}
               {report.therapeuticImplications.fdaApproved.length > 0 && (
                 <section>
-                  <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                    Terapias Aprobadas por FDA
-                  </h4>
+                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Terapias Aprobadas por FDA</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {report.therapeuticImplications.fdaApproved.map(
-                      (t, idx) => (
-                        <Card key={idx} className="p-3">
-                          <div className="font-medium">{t.drug}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {t.indication}
-                          </div>
-                          <div className="flex gap-1 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {t.biomarker}
-                            </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              {t.evidenceLevel}
-                            </Badge>
-                          </div>
-                        </Card>
-                      )
-                    )}
+                    {report.therapeuticImplications.fdaApproved.map((t, idx) => (
+                      <Card key={idx} className="p-3">
+                        <div className="font-medium">{t.drug}</div>
+                        <div className="text-sm text-muted-foreground">{t.indication}</div>
+                        <div className="flex gap-1 mt-1">
+                          <Badge variant="outline" className="text-xs">{t.biomarker}</Badge>
+                          <Badge variant="secondary" className="text-xs">{t.evidenceLevel}</Badge>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 </section>
               )}
 
-              {/* NCCN-Recommended */}
               {report.therapeuticImplications.nccnRecommended.length > 0 && (
                 <section>
-                  <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                    Terapias Recomendadas por NCCN
-                  </h4>
+                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Terapias Recomendadas por NCCN</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {report.therapeuticImplications.nccnRecommended.map(
-                      (t, idx) => (
-                        <Card key={idx} className="p-3">
-                          <div className="font-medium">{t.drug}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {t.indication}
-                          </div>
-                          <div className="flex gap-1 mt-1">
-                            <Badge variant="outline" className="text-xs">
-                              {t.biomarker}
-                            </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              {t.evidenceLevel}
-                            </Badge>
-                          </div>
-                        </Card>
-                      )
-                    )}
+                    {report.therapeuticImplications.nccnRecommended.map((t, idx) => (
+                      <Card key={idx} className="p-3">
+                        <div className="font-medium">{t.drug}</div>
+                        <div className="text-sm text-muted-foreground">{t.indication}</div>
+                        <div className="flex gap-1 mt-1">
+                          <Badge variant="outline" className="text-xs">{t.biomarker}</Badge>
+                          <Badge variant="secondary" className="text-xs">{t.evidenceLevel}</Badge>
+                        </div>
+                      </Card>
+                    ))}
                   </div>
                 </section>
               )}
 
-              {/* Clinical Trials */}
               {report.therapeuticImplications.clinicalTrials.length > 0 && (
                 <section>
-                  <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                    Oportunidades de Ensayos Clínicos
-                  </h4>
+                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Oportunidades de Ensayos Clínicos</h4>
                   <ul className="space-y-2">
-                    {report.therapeuticImplications.clinicalTrials.map(
-                      (ct, idx) => (
-                        <li key={idx} className="text-sm">
-                          <span className="font-medium">
-                            {ct.description}
-                          </span>
-                          <span className="text-muted-foreground">
-                            {' '}
-                            — Biomarcador: {ct.biomarker}
-                            {ct.phase && ` (${ct.phase})`}
-                          </span>
-                        </li>
-                      )
-                    )}
-                  </ul>
-                </section>
-              )}
-
-              {/* Monitoring */}
-              {report.monitoringRecommendations.length > 0 && (
-                <section>
-                  <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                    Recomendaciones de Monitoreo
-                  </h4>
-                  <ul className="list-disc list-inside text-sm space-y-1">
-                    {report.monitoringRecommendations.map((rec, idx) => (
-                      <li key={idx}>{rec}</li>
+                    {report.therapeuticImplications.clinicalTrials.map((ct, idx) => (
+                      <li key={idx} className="text-sm">
+                        <span className="font-medium">{ct.description}</span>
+                        <span className="text-muted-foreground"> — Biomarcador: {ct.biomarker}{ct.phase && ` (${ct.phase})`}</span>
+                      </li>
                     ))}
                   </ul>
                 </section>
               )}
 
-              {/* Limitations */}
+              {report.monitoringRecommendations.length > 0 && (
+                <section>
+                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Recomendaciones de Monitoreo</h4>
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    {report.monitoringRecommendations.map((rec, idx) => (<li key={idx}>{rec}</li>))}
+                  </ul>
+                </section>
+              )}
+
               <section>
-                <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                  Limitaciones
-                </h4>
+                <h4 className="text-md font-semibold border-b pb-2 mb-2">Limitaciones</h4>
                 <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                  {report.limitations.map((lim, idx) => (
-                    <li key={idx}>{lim}</li>
-                  ))}
+                  {report.limitations.map((lim, idx) => (<li key={idx}>{lim}</li>))}
                 </ul>
               </section>
 
-              {/* Methodology */}
               <section>
-                <h4 className="text-md font-semibold border-b pb-2 mb-2">
-                  Metodología
-                </h4>
-                <p className="text-sm text-muted-foreground">
-                  {report.methodology}
-                </p>
+                <h4 className="text-md font-semibold border-b pb-2 mb-2">Metodología</h4>
+                <p className="text-sm text-muted-foreground">{report.methodology}</p>
               </section>
 
-              {/* Disclaimer */}
               <Card className="p-3 bg-amber-50 border-amber-200">
                 <p className="text-xs text-amber-800">
-                  Este reporte fue generado por un asistente de IA (Claude Sonnet
-                  4.6) y está destinado únicamente a fines de investigación y
-                  educación. Todos los hallazgos deben ser revisados y validados
-                  por un patólogo molecular calificado antes de su uso clínico.
+                  Este reporte fue generado por un asistente de IA (Claude Sonnet 4.6) y está destinado
+                  únicamente a fines de investigación y educación. Todos los hallazgos deben ser revisados
+                  y validados por un patólogo molecular calificado antes de su uso clínico.
                 </p>
               </Card>
             </div>
@@ -530,22 +612,20 @@ export function ClinicalInsightsPanel({
         </Card>
       )}
 
-      {/* Empty state */}
-      {!loadingInterpret &&
-        !loadingReport &&
-        interpretations.length === 0 &&
-        !report && (
-          <Card className="p-8 text-center">
-            <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">
-              Interpretación Clínica de Variantes
-            </h3>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              Usá Claude para interpretar variantes siguiendo las guías AMP/ASCO/CAP
-              y generar reportes estructurados de patología molecular.
-            </p>
-          </Card>
-        )}
+      {/* Empty state — only show if nothing is loaded and not loading */}
+      {!isLoading && interpretations.size === 0 && !report && (
+        <Card className="p-8 text-center">
+          <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium mb-2">Interpretación Clínica de Variantes</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
+            Hacé click en "Interpretar" en cada variante para obtener la clasificación AMP/ASCO/CAP,
+            o usá "Interpretar Todas" para un análisis batch.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Costo estimado: ~$0.002 por variante individual, ~$0.03 batch completo (Sonnet)
+          </p>
+        </Card>
+      )}
     </div>
   );
 }

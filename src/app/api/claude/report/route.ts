@@ -21,11 +21,22 @@ const RequestSchema = z.object({
     .optional(),
 });
 
+function stripNulls(obj: any): any {
+  if (obj === null) return undefined;
+  if (Array.isArray(obj)) return obj.map(stripNulls);
+  if (typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => [k, stripNulls(v)])
+    );
+  }
+  return obj;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { variants, evidence, therapies, interpretations, context } =
-      RequestSchema.parse(body);
+      RequestSchema.parse(stripNulls(body));
 
     console.log(
       `[Claude Report] Generating report for ${variants.length} variants`
