@@ -122,9 +122,9 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
               <SummaryPanel
                 metadata={initialData.metadata}
                 qc={initialData.qc}
-                variantCount={initialData.variants.length}
-                evidenceCount={initialData.evidence.length}
-                therapyCount={initialData.therapies.length}
+                variants={initialData.variants}
+                evidence={initialData.evidence}
+                therapies={initialData.therapies}
               />
             </Suspense>
           </TabsContent>
