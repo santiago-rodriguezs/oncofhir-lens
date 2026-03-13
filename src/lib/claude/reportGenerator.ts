@@ -66,23 +66,36 @@ function buildVariantClassifications(
       i => i.gene === v.gene && (i.variant === v.hgvs_p || i.variant === v.hgvs_c || i.variant === v.hgvs)
     );
 
+    // Tier assignment based on OncoKB level (gold standard)
     const tier = interp?.tier
-      || (v.oncokbLevel?.startsWith('LEVEL_1') ? 'Tier I'
-        : v.oncokbLevel?.startsWith('LEVEL_2') ? 'Tier I'
-        : v.oncokbLevel?.startsWith('LEVEL_3') ? 'Tier II'
-        : v.oncokbLevel?.startsWith('LEVEL_4') ? 'Tier II'
-        : v.clinvarSignificance?.toLowerCase().includes('pathogenic') ? 'Tier III'
+      || (v.oncokbLevel?.match(/LEVEL_(1|2|R1)/) ? 'Tier I'
+        : v.oncokbLevel?.match(/LEVEL_(3A|3B|4|R2)/) ? 'Tier II'
+        : v.clinvarSignificance?.toLowerCase().includes('pathogenic') ? 'Tier II'
+        : v.isCommonPolymorphism ? 'Tier IV'
         : 'Tier III');
 
+    // Classification: prefer OncoKB oncogenic data, then ClinVar
+    const oncokbOncogenic = v.oncokbData?.oncogenic;
     const classification = interp?.classification
-      || v.clinvarSignificance
-      || 'Uncertain Significance';
+      || (oncokbOncogenic === 'Oncogenic' ? 'Pathogenic'
+        : oncokbOncogenic === 'Likely Oncogenic' ? 'Likely Pathogenic'
+        : v.clinvarSignificance || 'Uncertain Significance');
 
-    const significance = interp?.tierRationale
-      || (v.oncokbLevel ? `OncoKB ${v.oncokbLevel}` : '')
-      + (v.clinvarSignificance ? ` | ClinVar: ${v.clinvarSignificance}` : '')
-      + (v.cosmicId ? ` | ${v.cosmicId}` : '')
-      || 'Pending evaluation';
+    // Build rich significance string from all available data
+    const parts: string[] = [];
+    if (v.oncokbLevel) {
+      const levelName = v.oncokbLevel.replace('LEVEL_', 'Level ');
+      parts.push(`OncoKB ${levelName}`);
+    }
+    if (oncokbOncogenic) parts.push(`${oncokbOncogenic}`);
+    if (v.oncokbData?.mutationEffect) parts.push(`Efecto: ${v.oncokbData.mutationEffect}`);
+    if (v.clinvarSignificance) parts.push(`ClinVar: ${v.clinvarSignificance}`);
+    if (v.cosmicId) parts.push(`${v.cosmicId} (${v.cosmicCount?.toLocaleString() || '?'} casos)`);
+    if (v.gnomadAF != null) parts.push(`gnomAD AF: ${(v.gnomadAF * 100).toFixed(3)}%`);
+    if (v.vaf != null) parts.push(`VAF: ${(v.vaf * 100).toFixed(1)}%`);
+    if (v.effect) parts.push(v.effect);
+
+    const significance = interp?.tierRationale || parts.join(' | ') || 'Sin datos de anotación disponibles';
 
     return {
       gene: v.gene || 'Unknown',

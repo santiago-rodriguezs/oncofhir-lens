@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/table';
 import { Variant, Evidence, Therapy } from '@/core/models';
 import type { ClinicalInterpretation, GenomicReport } from '@/lib/claude';
-import { Brain, FileText, ChevronDown, ChevronUp, Loader2, CheckCircle2, Clock, Sparkles } from 'lucide-react';
+import { Brain, FileText, ChevronDown, ChevronUp, Loader2, CheckCircle2, Clock, Sparkles, Download } from 'lucide-react';
 import { ApiErrorBanner } from '@/components/ApiErrorBanner';
 
 interface ClinicalInsightsPanelProps {
@@ -309,6 +309,68 @@ export function ClinicalInsightsPanel({
   const interpretedCount = interpretations.size;
   const allInterpreted = interpretedCount === variants.length;
 
+  const handleDownloadPdf = () => {
+    if (!report) return;
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const fdaRows = report.therapeuticImplications.fdaApproved
+      .map(t => `<tr><td>${t.drug}</td><td>${t.biomarker}</td><td>${t.indication}</td><td>${t.evidenceLevel}</td></tr>`)
+      .join('');
+    const nccnRows = report.therapeuticImplications.nccnRecommended
+      .map(t => `<tr><td>${t.drug}</td><td>${t.biomarker}</td><td>${t.indication}</td><td>${t.evidenceLevel}</td></tr>`)
+      .join('');
+    const trialsRows = report.therapeuticImplications.clinicalTrials
+      .map(ct => `<li><strong>${ct.description}</strong> — Biomarcador: ${ct.biomarker}${ct.phase ? ` (${ct.phase})` : ''}</li>`)
+      .join('');
+    const vcRows = report.variantClassifications
+      .map(vc => `<tr><td>${vc.gene}</td><td>${vc.variant}</td><td>${vc.tier}</td><td>${vc.classification}</td><td style="max-width:400px">${vc.clinicalSignificance}</td></tr>`)
+      .join('');
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Reporte de Patología Molecular - OncoLens</title>
+      <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 40px; color: #1a1a1a; font-size: 13px; }
+        h1 { font-size: 22px; border-bottom: 3px solid #7c3aed; padding-bottom: 8px; color: #7c3aed; }
+        h2 { font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-top: 24px; }
+        table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+        th, td { border: 1px solid #d1d5db; padding: 6px 10px; text-align: left; }
+        th { background: #f3f4f6; font-weight: 600; }
+        .summary { background: #f5f3ff; border-left: 4px solid #7c3aed; padding: 12px 16px; margin: 16px 0; }
+        .warning { background: #fffbeb; border: 1px solid #f59e0b; padding: 10px 14px; font-size: 11px; margin-top: 24px; border-radius: 4px; }
+        .footer { margin-top: 32px; font-size: 11px; color: #6b7280; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 4px; }
+        @media print { body { padding: 20px; } }
+      </style></head><body>
+      <h1>Reporte de Patología Molecular</h1>
+      <p style="color:#6b7280;font-size:11px">Generado por OncoLens — ${new Date().toLocaleDateString('es-AR')}</p>
+
+      <h2>Resumen Ejecutivo</h2>
+      <div class="summary">${report.executiveSummary}</div>
+
+      <h2>Clasificación de Variantes (${report.variantClassifications.length})</h2>
+      <table><tr><th>Gen</th><th>Variante</th><th>Tier</th><th>Clasificación</th><th>Significancia Clínica</th></tr>${vcRows}</table>
+
+      ${fdaRows ? `<h2>Terapias Aprobadas por FDA</h2><table><tr><th>Droga</th><th>Biomarcador</th><th>Indicación</th><th>Nivel de Evidencia</th></tr>${fdaRows}</table>` : ''}
+      ${nccnRows ? `<h2>Terapias Recomendadas por NCCN</h2><table><tr><th>Droga</th><th>Biomarcador</th><th>Indicación</th><th>Nivel de Evidencia</th></tr>${nccnRows}</table>` : ''}
+      ${trialsRows ? `<h2>Oportunidades de Ensayos Clínicos</h2><ul>${trialsRows}</ul>` : ''}
+
+      <h2>Recomendaciones de Monitoreo</h2>
+      <ul>${report.monitoringRecommendations.map(r => `<li>${r}</li>`).join('')}</ul>
+
+      <h2>Limitaciones</h2>
+      <ul>${report.limitations.map(l => `<li>${l}</li>`).join('')}</ul>
+
+      <h2>Metodología</h2>
+      <p>${report.methodology}</p>
+
+      <div class="warning">⚠️ Este reporte fue generado con asistencia de IA (Claude) y está destinado únicamente a fines de investigación y educación. Todos los hallazgos deben ser revisados y validados por un patólogo molecular calificado antes de su uso clínico.</div>
+      <div class="footer">OncoLens FHIR — Plataforma de Análisis Genómico Oncológico</div>
+      </body></html>`);
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   return (
     <div className="space-y-6">
       {/* Action buttons */}
@@ -344,8 +406,14 @@ export function ClinicalInsightsPanel({
               variant="outline"
             >
               <FileText className="h-4 w-4 mr-2" />
-              {loadingReport ? 'Generando...' : 'Generar Reporte'}
+              {loadingReport ? 'Generando...' : report ? 'Regenerar Reporte' : 'Generar Reporte'}
             </Button>
+            {report && (
+              <Button onClick={handleDownloadPdf} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-1.5" />
+                PDF
+              </Button>
+            )}
           </div>
         </div>
         {error && (
@@ -358,6 +426,137 @@ export function ClinicalInsightsPanel({
       {/* Deep research loading */}
       {isLoading && loadingSteps.length > 0 && (
         <DeepResearchLoader steps={loadingSteps} elapsedSeconds={elapsedSeconds} title={loadingTitle} />
+      )}
+
+      {/* Generated Report — FIRST */}
+      {report && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Reporte de Patología Molecular</h3>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleDownloadPdf} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-1.5" />
+                Descargar PDF
+              </Button>
+              <Badge variant="outline">Generado por IA</Badge>
+            </div>
+          </div>
+          <ScrollArea className="max-h-[600px]">
+            <div className="space-y-6 pr-4">
+              <section>
+                <h4 className="text-md font-semibold border-b pb-2 mb-2">Resumen Ejecutivo</h4>
+                <p className="text-sm leading-relaxed">{report.executiveSummary}</p>
+              </section>
+
+              <section>
+                <h4 className="text-md font-semibold border-b pb-2 mb-2">Clasificación de Variantes</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Gen</TableHead>
+                      <TableHead>Variante</TableHead>
+                      <TableHead>Tier</TableHead>
+                      <TableHead>Clasificación</TableHead>
+                      <TableHead>Significancia</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {report.variantClassifications.map((vc, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium">{vc.gene}</TableCell>
+                        <TableCell className="font-mono text-sm">{vc.variant}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={TIER_COLORS[vc.tier] || ''}>{vc.tier}</Badge>
+                        </TableCell>
+                        <TableCell>{vc.classification}</TableCell>
+                        <TableCell className="text-sm max-w-md">{vc.clinicalSignificance}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </section>
+
+              {report.therapeuticImplications.fdaApproved.length > 0 && (
+                <section>
+                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Terapias Aprobadas por FDA</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {report.therapeuticImplications.fdaApproved.map((t, idx) => (
+                      <Card key={idx} className="p-3">
+                        <div className="font-medium">{t.drug}</div>
+                        <div className="text-sm text-muted-foreground">{t.indication}</div>
+                        <div className="flex gap-1 mt-1">
+                          <Badge variant="outline" className="text-xs">{t.biomarker}</Badge>
+                          <Badge variant="secondary" className="text-xs">{t.evidenceLevel}</Badge>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {report.therapeuticImplications.nccnRecommended.length > 0 && (
+                <section>
+                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Terapias Recomendadas por NCCN</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {report.therapeuticImplications.nccnRecommended.map((t, idx) => (
+                      <Card key={idx} className="p-3">
+                        <div className="font-medium">{t.drug}</div>
+                        <div className="text-sm text-muted-foreground">{t.indication}</div>
+                        <div className="flex gap-1 mt-1">
+                          <Badge variant="outline" className="text-xs">{t.biomarker}</Badge>
+                          <Badge variant="secondary" className="text-xs">{t.evidenceLevel}</Badge>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {report.therapeuticImplications.clinicalTrials.length > 0 && (
+                <section>
+                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Oportunidades de Ensayos Clínicos</h4>
+                  <ul className="space-y-2">
+                    {report.therapeuticImplications.clinicalTrials.map((ct, idx) => (
+                      <li key={idx} className="text-sm">
+                        <span className="font-medium">{ct.description}</span>
+                        <span className="text-muted-foreground"> — Biomarcador: {ct.biomarker}{ct.phase && ` (${ct.phase})`}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {report.monitoringRecommendations.length > 0 && (
+                <section>
+                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Recomendaciones de Monitoreo</h4>
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    {report.monitoringRecommendations.map((rec, idx) => (<li key={idx}>{rec}</li>))}
+                  </ul>
+                </section>
+              )}
+
+              <section>
+                <h4 className="text-md font-semibold border-b pb-2 mb-2">Limitaciones</h4>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                  {report.limitations.map((lim, idx) => (<li key={idx}>{lim}</li>))}
+                </ul>
+              </section>
+
+              <section>
+                <h4 className="text-md font-semibold border-b pb-2 mb-2">Metodología</h4>
+                <p className="text-sm text-muted-foreground">{report.methodology}</p>
+              </section>
+
+              <Card className="p-3 bg-amber-50 border-amber-200">
+                <p className="text-xs text-amber-800">
+                  Este reporte fue generado por un asistente de IA (Claude Sonnet 4.6) y está destinado
+                  únicamente a fines de investigación y educación. Todos los hallazgos deben ser revisados
+                  y validados por un patólogo molecular calificado antes de su uso clínico.
+                </p>
+              </Card>
+            </div>
+          </ScrollArea>
+        </Card>
       )}
 
       {/* Variants table — each row has an "Interpretar" button */}
@@ -521,131 +720,6 @@ export function ClinicalInsightsPanel({
           </TableBody>
         </Table>
       </Card>
-
-      {/* Generated Report */}
-      {report && (
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Reporte de Patología Molecular</h3>
-            <Badge variant="outline">Generado por IA</Badge>
-          </div>
-          <ScrollArea className="max-h-[600px]">
-            <div className="space-y-6 pr-4">
-              <section>
-                <h4 className="text-md font-semibold border-b pb-2 mb-2">Resumen Ejecutivo</h4>
-                <p className="text-sm leading-relaxed">{report.executiveSummary}</p>
-              </section>
-
-              <section>
-                <h4 className="text-md font-semibold border-b pb-2 mb-2">Clasificación de Variantes</h4>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Gen</TableHead>
-                      <TableHead>Variante</TableHead>
-                      <TableHead>Tier</TableHead>
-                      <TableHead>Clasificación</TableHead>
-                      <TableHead>Significancia</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {report.variantClassifications.map((vc, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-medium">{vc.gene}</TableCell>
-                        <TableCell className="font-mono text-sm">{vc.variant}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={TIER_COLORS[vc.tier] || ''}>{vc.tier}</Badge>
-                        </TableCell>
-                        <TableCell>{vc.classification}</TableCell>
-                        <TableCell className="text-sm">{vc.clinicalSignificance}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </section>
-
-              {report.therapeuticImplications.fdaApproved.length > 0 && (
-                <section>
-                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Terapias Aprobadas por FDA</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {report.therapeuticImplications.fdaApproved.map((t, idx) => (
-                      <Card key={idx} className="p-3">
-                        <div className="font-medium">{t.drug}</div>
-                        <div className="text-sm text-muted-foreground">{t.indication}</div>
-                        <div className="flex gap-1 mt-1">
-                          <Badge variant="outline" className="text-xs">{t.biomarker}</Badge>
-                          <Badge variant="secondary" className="text-xs">{t.evidenceLevel}</Badge>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {report.therapeuticImplications.nccnRecommended.length > 0 && (
-                <section>
-                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Terapias Recomendadas por NCCN</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {report.therapeuticImplications.nccnRecommended.map((t, idx) => (
-                      <Card key={idx} className="p-3">
-                        <div className="font-medium">{t.drug}</div>
-                        <div className="text-sm text-muted-foreground">{t.indication}</div>
-                        <div className="flex gap-1 mt-1">
-                          <Badge variant="outline" className="text-xs">{t.biomarker}</Badge>
-                          <Badge variant="secondary" className="text-xs">{t.evidenceLevel}</Badge>
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {report.therapeuticImplications.clinicalTrials.length > 0 && (
-                <section>
-                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Oportunidades de Ensayos Clínicos</h4>
-                  <ul className="space-y-2">
-                    {report.therapeuticImplications.clinicalTrials.map((ct, idx) => (
-                      <li key={idx} className="text-sm">
-                        <span className="font-medium">{ct.description}</span>
-                        <span className="text-muted-foreground"> — Biomarcador: {ct.biomarker}{ct.phase && ` (${ct.phase})`}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-
-              {report.monitoringRecommendations.length > 0 && (
-                <section>
-                  <h4 className="text-md font-semibold border-b pb-2 mb-2">Recomendaciones de Monitoreo</h4>
-                  <ul className="list-disc list-inside text-sm space-y-1">
-                    {report.monitoringRecommendations.map((rec, idx) => (<li key={idx}>{rec}</li>))}
-                  </ul>
-                </section>
-              )}
-
-              <section>
-                <h4 className="text-md font-semibold border-b pb-2 mb-2">Limitaciones</h4>
-                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                  {report.limitations.map((lim, idx) => (<li key={idx}>{lim}</li>))}
-                </ul>
-              </section>
-
-              <section>
-                <h4 className="text-md font-semibold border-b pb-2 mb-2">Metodología</h4>
-                <p className="text-sm text-muted-foreground">{report.methodology}</p>
-              </section>
-
-              <Card className="p-3 bg-amber-50 border-amber-200">
-                <p className="text-xs text-amber-800">
-                  Este reporte fue generado por un asistente de IA (Claude Sonnet 4.6) y está destinado
-                  únicamente a fines de investigación y educación. Todos los hallazgos deben ser revisados
-                  y validados por un patólogo molecular calificado antes de su uso clínico.
-                </p>
-              </Card>
-            </div>
-          </ScrollArea>
-        </Card>
-      )}
 
       {/* Empty state — only show if nothing is loaded and not loading */}
       {!isLoading && interpretations.size === 0 && !report && (
