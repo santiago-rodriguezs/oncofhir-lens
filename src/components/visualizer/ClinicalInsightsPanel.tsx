@@ -263,10 +263,9 @@ export function ClinicalInsightsPanel({
 
     setLoadingTitle('Generando reporte de patología molecular...');
     setLoadingSteps([
-      { id: 'compile', label: 'Compilando variantes, evidencia y terapias...', status: 'active' },
-      { id: 'exec', label: 'Generando resumen ejecutivo...', status: 'pending' },
-      { id: 'fda', label: 'Evaluando terapias FDA/NCCN...', status: 'pending' },
-      { id: 'format', label: 'Estructurando reporte CAP/AMP...', status: 'pending' },
+      { id: 'rank', label: 'Rankeando variantes por importancia clínica...', status: 'active' },
+      { id: 'template', label: 'Construyendo reporte desde datos...', status: 'pending' },
+      { id: 'summary', label: 'Claude: resumen ejecutivo + top variantes...', status: 'pending' },
     ]);
 
     const advanceStep = (idx: number) => {
@@ -276,9 +275,8 @@ export function ClinicalInsightsPanel({
     };
 
     try {
-      setTimeout(() => advanceStep(1), 3000);
-      setTimeout(() => advanceStep(2), 8000);
-      setTimeout(() => advanceStep(3), 14000);
+      setTimeout(() => advanceStep(1), 1000);
+      setTimeout(() => advanceStep(2), 2500);
 
       const allInterps = Array.from(interpretations.values());
 
