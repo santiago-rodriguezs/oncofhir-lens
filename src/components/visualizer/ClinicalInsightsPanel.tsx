@@ -20,6 +20,7 @@ import { Brain, FileText, ChevronDown, ChevronUp, Loader2, CheckCircle2, Clock, 
 import { ApiErrorBanner } from '@/components/ApiErrorBanner';
 
 interface ClinicalInsightsPanelProps {
+  caseId: string;
   variants: Variant[];
   evidence: Evidence[];
   therapies: Therapy[];
@@ -90,6 +91,7 @@ function DeepResearchLoader({ steps, elapsedSeconds, title }: { steps: LoadingSt
 }
 
 export function ClinicalInsightsPanel({
+  caseId,
   variants,
   evidence,
   therapies,
@@ -101,6 +103,7 @@ export function ClinicalInsightsPanel({
   const [loadingVariantIdx, setLoadingVariantIdx] = useState<number | null>(null);
   const [loadingAllVariants, setLoadingAllVariants] = useState(false);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [loadingCache, setLoadingCache] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedVariant, setExpandedVariant] = useState<number | null>(null);
 
@@ -111,6 +114,37 @@ export function ClinicalInsightsPanel({
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
   const isLoading = loadingVariantIdx !== null || loadingAllVariants || loadingReport;
+
+  // Load cached report & interpretations from MongoDB on mount
+  useEffect(() => {
+    async function loadCache() {
+      try {
+        const res = await fetch(`/api/cases/${caseId}`);
+        if (!res.ok) return;
+        const caseData = await res.json();
+
+        if (caseData.cachedReport) {
+          setReport(caseData.cachedReport);
+        }
+
+        if (caseData.cachedInterpretations?.length > 0) {
+          const newMap = new Map<number, ClinicalInterpretation>();
+          for (const interp of caseData.cachedInterpretations) {
+            const idx = variants.findIndex(
+              (v) => v.gene === interp.gene && (v.hgvs_p === interp.variant || v.hgvs_c === interp.variant || v.hgvs === interp.variant)
+            );
+            if (idx >= 0) newMap.set(idx, interp);
+          }
+          if (newMap.size > 0) setInterpretations(newMap);
+        }
+      } catch {
+        // Silent fail — cache miss is fine
+      } finally {
+        setLoadingCache(false);
+      }
+    }
+    loadCache();
+  }, [caseId, variants]);
 
   // Timer
   useEffect(() => {
@@ -149,6 +183,7 @@ export function ClinicalInsightsPanel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
         body: JSON.stringify({
+          caseId,
           variants: [v],
           context: tumorType ? { tumorType } : undefined,
         }),
@@ -198,6 +233,7 @@ export function ClinicalInsightsPanel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
         body: JSON.stringify({
+          caseId,
           variants,
           context: tumorType ? { tumorType } : undefined,
         }),
@@ -250,6 +286,7 @@ export function ClinicalInsightsPanel({
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-claude-model': model },
         body: JSON.stringify({
+          caseId,
           variants,
           evidence,
           therapies,

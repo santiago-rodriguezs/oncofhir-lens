@@ -18,6 +18,10 @@ export interface Case {
   }>;
   parsingDetails?: any;
   auditEntries?: any[];
+  /** Cached Claude report — avoids re-generating (saves tokens) */
+  cachedReport?: any;
+  /** Cached per-variant interpretations */
+  cachedInterpretations?: any[];
 }
 
 // ── In-memory fallback ─────────────────────────────────────────────────────
@@ -43,6 +47,8 @@ function docToCase(doc: any): Case {
     highlights: doc.highlights,
     parsingDetails: doc.parsingDetails,
     auditEntries: doc.auditEntries,
+    cachedReport: doc.cachedReport,
+    cachedInterpretations: doc.cachedInterpretations,
   };
 }
 

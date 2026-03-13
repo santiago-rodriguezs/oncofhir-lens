@@ -246,6 +246,7 @@ export function VisualizerClient({ caseId, initialData }: VisualizerClientProps)
           <TabsContent value="insights">
             <Suspense fallback={<TabSkeleton />}>
               <ClinicalInsightsPanel
+                caseId={caseId}
                 variants={variants}
                 evidence={evidence}
                 therapies={therapies}
