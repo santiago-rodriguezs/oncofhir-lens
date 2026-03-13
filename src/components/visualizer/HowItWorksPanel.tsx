@@ -226,33 +226,84 @@ export function HowItWorksPanel() {
   │  Tumor Board Assistant           │
   └──────────────┬───────────────────┘
                  │
-                 ▼
+         ┌───────┴───────┐
+         ▼               ▼
+  ┌──────────────┐ ┌──────────────┐
+  │ PERSISTENCE  │ │ OUTPUT LAYER │
+  │              │ │              │
+  │ MongoDB Atlas│ │ FHIR IG STU2 │
+  │ (casos)      │ │ GA4GH VRS    │
+  │              │ │ Phenopackets │
+  │ HAPI FHIR   │ │              │
+  │ (recursos)   │ │ SMART on FHIR│
+  │              │ │ (planificado)│
+  └──────────────┘ └──────────────┘
+         │
+         ▼
   ┌──────────────────────────────────┐
-  │        OUTPUT LAYER              │
-  │                                  │
-  │  ┌───────────────────────────┐   │
-  │  │ FHIR Genomics Reporting   │   │
-  │  │ IG (STU2)                 │   │
-  │  │ • GenomicReport           │   │
-  │  │ • Variant Observation     │   │
-  │  │ • DiagnosticImplication   │   │
-  │  │ • TherapeuticImplication  │   │
-  │  │ • ServiceRequest + Task   │   │
-  │  └───────────────────────────┘   │
-  │                                  │
-  │  ┌───────────────────────────┐   │
-  │  │ GA4GH Standards           │   │
-  │  │ • VRS v1.3 Alleles        │   │
-  │  │ • Phenopackets v2         │   │
-  │  └───────────────────────────┘   │
-  │                                  │
-  │  ┌───────────────────────────┐   │
-  │  │ Future: SMART on FHIR     │   │
-  │  │ → EHR Integration         │   │
-  │  └───────────────────────────┘   │
+  │      FRONTEND (Next.js 14)       │
+  │  Vercel · Google OAuth · shadcn  │
+  │  Visor de pacientes desde FHIR   │
+  │  Dashboard genómico con insights │
   └──────────────────────────────────┘
 `}
           </pre>
+        </Card>
+
+        {/* ── Integrations & Costs ── */}
+        <Card className="p-6">
+          <h3 className="text-xl font-semibold mb-2">Integraciones y Costos</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Mapa completo de servicios externos utilizados, su propósito y costo estimado.
+            La plataforma está diseñada para funcionar con costo mínimo (o cero) en modo demo/tesis.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 pr-4 font-semibold">Servicio</th>
+                  <th className="text-left py-2 pr-4 font-semibold">Uso en OncoLens</th>
+                  <th className="text-left py-2 pr-4 font-semibold">Costo</th>
+                  <th className="text-left py-2 font-semibold">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {INTEGRATIONS.map((integration, idx) => (
+                  <tr key={idx} className="border-b border-dashed">
+                    <td className="py-2.5 pr-4 font-medium">{integration.service}</td>
+                    <td className="py-2.5 pr-4 text-muted-foreground text-xs">{integration.usage}</td>
+                    <td className="py-2.5 pr-4">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          integration.cost === 'Gratis'
+                            ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
+                            : integration.cost.includes('Pago')
+                            ? 'border-amber-300 text-amber-700 bg-amber-50'
+                            : 'border-gray-300'
+                        }`}
+                      >
+                        {integration.cost}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5">
+                      <Badge
+                        variant={integration.active ? 'default' : 'secondary'}
+                        className={`text-xs ${integration.active ? 'bg-emerald-600' : 'opacity-50'}`}
+                      >
+                        {integration.active ? 'Activo' : 'No se usa'}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+            <span className="font-medium">Nota sobre costos:</span> El único servicio pago es la API de Anthropic (Claude).
+            Para uso académico/tesis, el costo estimado es ~USD 1-5/mes dependiendo del volumen de casos procesados.
+            Todos los demás servicios operan en tiers gratuitos.
+          </div>
         </Card>
 
         {/* ── File Structure ── */}
@@ -541,6 +592,69 @@ const VISUALIZER_TABS = [
     what: 'Log de auditoría del caso y sistema de notas clínicas. Permite agregar observaciones del equipo médico.',
     how: 'Las notas se persisten via POST /api/cases/[id]/notes. El log de auditoría registra eventos del ciclo de vida del caso (creación, anotación, interpretación, exportación). Cada entrada tiene timestamp e información contextual.',
     borderColor: 'border-red-500',
+  },
+];
+
+const INTEGRATIONS = [
+  {
+    service: 'Anthropic Claude (Sonnet/Opus)',
+    usage: 'Extracción de variantes desde PDF, interpretación clínica AMP/ASCO/CAP, generación de reportes, asistente de tumor board',
+    cost: 'Pago por uso (~$3/1M tokens input)',
+    active: true,
+  },
+  {
+    service: 'MongoDB Atlas',
+    usage: 'Persistencia de casos (variantes, evidencia, terapias, metadata). Fallback in-memory si no está disponible',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
+    service: 'HAPI FHIR Server',
+    usage: 'Almacenamiento interoperable de recursos FHIR R4. Push de bundles, $validate, $everything, visor de pacientes',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
+    service: 'OncoKB (MSK)',
+    usage: 'Anotación de variantes: oncogenicidad, efecto de mutación, niveles terapéuticos FDA (1-4), drogas aprobadas',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
+    service: 'ClinVar (NCBI)',
+    usage: 'Significancia clínica de variantes: clasificación de patogenicidad, estado de revisión, consenso de submitters',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
+    service: 'DGIdb',
+    usage: 'Interacciones droga-gen: fármacos asociados a genes mutados, categorías druggable, fuentes de interacción',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
+    service: 'Vercel',
+    usage: 'Hosting de la aplicación Next.js, CI/CD automático desde GitHub, dominio y SSL',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
+    service: 'Google OAuth',
+    usage: 'Autenticación de usuarios con cuenta Google (whitelist de emails autorizados)',
+    cost: 'Gratis',
+    active: true,
+  },
+  {
+    service: 'GCP Healthcare API',
+    usage: 'FHIR store gestionado en Google Cloud (reemplazado por HAPI FHIR)',
+    cost: 'Pago por uso',
+    active: false,
+  },
+  {
+    service: 'GCP Vertex AI (Gemini)',
+    usage: 'Modelo de lenguaje alternativo (reemplazado por Claude Anthropic)',
+    cost: 'Pago por uso',
+    active: false,
   },
 ];
 
